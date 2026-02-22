@@ -284,16 +284,16 @@ export default function App() {
 
   // Auto-expire conferences
   useEffect(() => {
-    const expired = conferences.filter(c => c.status === "active" && c.end && c.end < TODAY);
+    const expired = conferences.filter((c: any) => c.status === "active" && c.end && c.end < TODAY);
     if (expired.length > 0) {
-      expired.forEach(c => {
+      expired.forEach((c: any) => {
         fetch("/api/conferences", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: c.id, status: "expired" }),
         });
       });
-      setConferences(conferences.map(c => 
+      setConferences(conferences.map((c: any) => 
         c.status === "active" && c.end && c.end < TODAY ? { ...c, status: "expired" } : c
       ));
     }
@@ -501,9 +501,9 @@ export default function App() {
 
   const counts = {
     all: conferences.length,
-    active: conferences.filter(c => c.status === "active").length,
-    draft: conferences.filter(c => c.status === "draft").length,
-    expired: conferences.filter(c => c.status === "expired").length,
+    active: conferences.filter((c: any) => c.status === "active").length,
+    draft: conferences.filter((c: any) => c.status === "draft").length,
+    expired: conferences.filter((c: any) => c.status === "expired").length,
   };
 
   // ============================================================
