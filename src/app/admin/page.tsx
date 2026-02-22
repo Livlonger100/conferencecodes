@@ -285,16 +285,16 @@ export default function App() {
 
   // Auto-expire conferences
   useEffect(() => {
-    const expired = conferences.filter((c: any) => c.status === "active" && c.end && c.end < TODAY);
+    const expired = conferences.filter(c => c.status === "active" && c.end && c.end < TODAY);
     if (expired.length > 0) {
-      expired.forEach((c: any) => {
+      expired.forEach(c => {
         fetch("/api/conferences", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: c.id, status: "expired" }),
         });
       });
-      setConferences(conferences.map((c: any) => 
+      setConferences(conferences.map(c => 
         c.status === "active" && c.end && c.end < TODAY ? { ...c, status: "expired" } : c
       ));
     }
@@ -323,17 +323,7 @@ export default function App() {
           system: EXTRACTION_SYSTEM,
           messages: [{
             role: "user",
-            content: `Extract all conference data from these URLs:
-${extractUrl.trim().split(/[
-,]+/).map((u: string) => u.trim()).filter(Boolean).join("
-")}
-
-CRITICAL INSTRUCTIONS:
-1. Visit EACH URL provided above
-2. ALSO try visiting these common subpages by appending to the base domain: /registration, /register, /pricing, /tickets, /attend, /speakers, /travel, /hotels, /accommodation, /venue, /about, /contact
-3. The PRICING is often NOT on the main page — it is usually on a separate registration or tickets page. You MUST check the registration page.
-4. Look for links containing words like "Register", "Attend", "Tickets", "Pricing", "Book" and follow them.
-5. Return ONLY valid JSON.`
+            content: `Extract all conference data from these URLs:\n${extractUrl.trim().split(/[\n,]+/).map((u: string) => u.trim()).filter(Boolean).join("\n")}\n\nCRITICAL INSTRUCTIONS:\n1. Visit EACH URL provided above\n2. ALSO try visiting these common subpages by appending to the base domain: /registration, /register, /pricing, /tickets, /attend, /speakers, /travel, /hotels, /accommodation, /venue, /about, /contact\n3. The PRICING is often NOT on the main page — it is usually on a separate registration or tickets page. You MUST check the registration page.\n4. Look for links containing words like "Register", "Attend", "Tickets", "Pricing", "Book" and follow them.\n5. Return ONLY valid JSON.`
           }],
           tools: [{
             type: "web_search_20250305",
@@ -349,8 +339,7 @@ CRITICAL INSTRUCTIONS:
       const fullText = data.content
         .map(item => (item.type === "text" ? item.text : ""))
         .filter(Boolean)
-        .join("
-");
+        .join("\n");
 
       // Parse JSON from response
       const clean = fullText.replace(/```json|```/g, "").trim();
@@ -361,8 +350,7 @@ CRITICAL INSTRUCTIONS:
       const parsed = JSON.parse(jsonMatch[0]);
 
       // Normalize the extracted data into our internal format
-      const urls = extractUrl.trim().split(/[
-,]+/).map(u => u.trim()).filter(Boolean);
+      const urls = extractUrl.trim().split(/[\n,]+/).map(u => u.trim()).filter(Boolean);
       const normalized = {
         id: `conf_${Date.now()}`,
         source_url: urls[0] || extractUrl.trim(),
@@ -514,9 +502,9 @@ CRITICAL INSTRUCTIONS:
 
   const counts = {
     all: conferences.length,
-    active: conferences.filter((c: any) => c.status === "active").length,
-    draft: conferences.filter((c: any) => c.status === "draft").length,
-    expired: conferences.filter((c: any) => c.status === "expired").length,
+    active: conferences.filter(c => c.status === "active").length,
+    draft: conferences.filter(c => c.status === "draft").length,
+    expired: conferences.filter(c => c.status === "expired").length,
   };
 
   // ============================================================
@@ -1101,8 +1089,7 @@ CRITICAL INSTRUCTIONS:
                   style={{ ...S.input, flex: 1, fontSize: 14, minHeight: 56, resize: "vertical", fontFamily: "monospace" }}
                   value={extractUrl}
                   onChange={e => setExtractUrl(e.target.value)}
-                  placeholder={"https://events.economist.com/technology-for-change-week/
-https://events.economist.com/technology-for-change-week/registration/"}
+                  placeholder={"https://events.economist.com/technology-for-change-week/\nhttps://events.economist.com/technology-for-change-week/registration/"}
                   disabled={extracting}
                   rows={2}
                 />
@@ -1221,10 +1208,10 @@ https://events.economist.com/technology-for-change-week/registration/"}
                       <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{conf.name || "Untitled"}</div>
                       <div style={{ fontSize: 12, color: "#94a3b8" }}>
                         {conf.city && conf.country ? `${conf.city}, ${conf.country}` : "Location TBD"}
-                        {conf.start && ` · ${new Date(conf.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
-                        {conf.end && conf.end !== conf.start && ` – ${new Date(conf.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                        {duration && <span style={{ color: "#64748b" }}> · {duration} day{duration !== 1 ? "s" : ""}</span>}
-                        {daysAway !== null && daysAway > 0 && <span style={{ color: daysAway < 30 ? "#f97316" : "#64748b" }}> · {daysAway}d away</span>}
+                        {conf.start && ` \u00b7 ${new Date(conf.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                        {conf.end && conf.end !== conf.start && ` \u2013 ${new Date(conf.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                        {duration && <span style={{ color: "#64748b" }}> \u00b7 {duration} day{duration !== 1 ? "s" : ""}</span>}
+                        {daysAway !== null && daysAway > 0 && <span style={{ color: daysAway < 30 ? "#f97316" : "#64748b" }}> \u00b7 {daysAway}d away</span>}
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -1240,7 +1227,7 @@ https://events.economist.com/technology-for-change-week/registration/"}
                       )}
                       <div style={{ fontSize: 11, color: "#64748b" }}>
                         {conf.pricing?.length || 0} tier{conf.pricing?.length !== 1 ? "s" : ""}
-                        {conf.hotels?.length > 0 && ` · ${conf.hotels.length} hotel${conf.hotels.length !== 1 ? "s" : ""}`}
+                        {conf.hotels?.length > 0 && ` \u00b7 ${conf.hotels.length} hotel${conf.hotels.length !== 1 ? "s" : ""}`}
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
                         <button onClick={e => { e.stopPropagation(); setEditingConf(conf); setView("edit"); }} style={S.btnGhost}>Edit</button>
