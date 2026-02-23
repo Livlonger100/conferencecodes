@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import { useState, useEffect } from "react";
 
@@ -54,6 +53,7 @@ function transformConference(c: any) {
       id: t.id,
       tier: t.tier_name || "",
       price: t.price != null ? parseFloat(t.price) : null,
+      price_after_deadline: t.price_after_deadline != null ? parseFloat(t.price_after_deadline) : null,
       currency: t.currency || "USD",
       deadline: t.deadline || "",
       days_included: t.days_included || "",
@@ -115,6 +115,7 @@ function toDbFormat(conf: any) {
     pricing: (conf.pricing || []).map((t: any, i: number) => ({
       tier_name: t.tier || "",
       price: t.price,
+      price_after_deadline: t.price_after_deadline || null,
       currency: t.currency || "USD",
       deadline: t.deadline || null,
       days_included: t.days_included || "",
@@ -438,6 +439,22 @@ export default function App() {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async (conf, isNew = true) => {
+    // Handle delete from edit view
+    if (conf._delete && conf.id) {
+      setSaving(true);
+      try {
+        await deleteConferenceFromDb(conf.id);
+        const fresh = await loadConferencesAsync();
+        setConferences(fresh);
+        setView("list");
+        setEditingConf(null);
+        showToast(`"${conf.name}" deleted`, "error");
+      } catch (e) {
+        showToast(`Delete failed: ${e.message}`, "error");
+      }
+      setSaving(false);
+      return;
+    }
     // Duplicate detection for new conferences
     if (isNew && !dupeWarning) {
       const dupes = conferences.filter(c => {
@@ -547,7 +564,7 @@ export default function App() {
       setForm(f => ({ ...f, pricing: p }));
     };
     const addPricingTier = () => {
-      setForm(f => ({ ...f, pricing: [...f.pricing, { id: `tier_${Date.now()}`, tier: "Day Pass", price: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "", requires_approval: false, notes: "" }] }));
+      setForm(f => ({ ...f, pricing: [...f.pricing, { id: `tier_${Date.now()}`, tier: "Day Pass", price: null, price_after_deadline: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "", requires_approval: false, sold_out: false, notes: "" }] }));
     };
     const removePricingTier = (index) => {
       setForm(f => ({ ...f, pricing: f.pricing.filter((_, i) => i !== index) }));
@@ -577,6 +594,13 @@ export default function App() {
             {isNew ? "Add Conference" : `Edit: ${form.name}`}
           </h2>
           <div style={{ display: "flex", gap: 8 }}>
+            {!isNew && (
+              <button onClick={() => {
+                if (confirm(`Delete "${form.name}"? This cannot be undone.`)) {
+                  onSave({ ...form, _delete: true }, false);
+                }
+              }} style={{ ...S.btnSecondary, color: "#ef4444", borderColor: "rgba(239,68,68,0.3)" }}>Delete</button>
+            )}
             <button onClick={onCancel} style={S.btnSecondary}>Cancel</button>
             <button onClick={() => onSave(form, isNew)} disabled={saving} style={{ ...S.btnPrimary, opacity: saving ? 0.6 : 1 }}>
               {saving ? "Saving..." : isNew ? "Save as Draft" : "Save Changes"}
@@ -776,7 +800,7 @@ export default function App() {
                 </div>
                 <button onClick={() => removePricingTier(i)} style={{ ...S.btnGhost, color: "#ef4444" }}>Remove</button>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 2fr", gap: 8, marginBottom: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr", gap: 8, marginBottom: 8 }}>
                 <div>
                   <label style={S.label}>Tier Name</label>
                   <input style={S.inputSm} value={tier.tier} onChange={e => updatePricing(i, "tier", e.target.value)} placeholder="e.g. Early Bird, Day Pass" />
@@ -784,6 +808,10 @@ export default function App() {
                 <div>
                   <label style={S.label}>Price {tier.price === null ? "(unknown)" : ""}</label>
                   <input style={{ ...S.inputSm, color: tier.price === null ? "#f59e0b" : undefined }} type="number" value={tier.price === null ? "" : tier.price} onChange={e => updatePricing(i, "price", e.target.value === "" ? null : parseFloat(e.target.value) || 0)} placeholder="null = unknown" />
+                </div>
+                <div>
+                  <label style={S.label}>Price After Deadline</label>
+                  <input style={{ ...S.inputSm, color: tier.price_after_deadline ? "#ef4444" : undefined }} type="number" value={tier.price_after_deadline || ""} onChange={e => updatePricing(i, "price_after_deadline", e.target.value === "" ? null : parseFloat(e.target.value) || 0)} placeholder="e.g. 1899" />
                 </div>
                 <div>
                   <label style={S.label}>Currency</label>
