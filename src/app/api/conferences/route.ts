@@ -15,7 +15,7 @@ export async function GET() {
 // POST create a new conference
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { pricing, hotels, ...conf } = body;
+  const { id: _id, pricing, hotels, ...conf } = body;
 
   // Insert conference
   const { data: created, error } = await supabaseAdmin
