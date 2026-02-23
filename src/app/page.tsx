@@ -951,9 +951,9 @@ export default function App() {
             {/* Stats bar */}
             <div style={{ display: "flex", justifyContent: "center", gap: 40, marginBottom: 8 }}>
               {[
-                { n: "247", label: "Verified Conferences" },
-                { n: "98.2%", label: "Accuracy Rate" },
-                { n: "$340", label: "Avg. Savings" },
+                { n: String(CONFERENCES.length), label: "Verified Conferences" },
+                
+                
               ].map((s, i) => (
                 <div key={i} style={{ textAlign: "center" }}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: "#f97316", fontFamily: "'Space Mono', monospace" }}>{s.n}</div>
