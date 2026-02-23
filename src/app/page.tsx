@@ -74,7 +74,7 @@ function formatDate(dateStr) {
 }
 
 function formatPrice(p) {
-  return "$" + p.toLocaleString();
+  return p != null ? "$" + p.toLocaleString() : "TBA";
 }
 
 // Determine current and next price from a conference's pricing tiers
