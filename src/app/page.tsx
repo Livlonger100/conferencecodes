@@ -228,7 +228,7 @@ function ConferenceCard({ conf, onClick }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{conf.attendees.toLocaleString()} attendees</span>
+          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{conf.attendees ? conf.attendees.toLocaleString() : "TBA"} attendees</span>
         </div>
       </div>
 
@@ -321,7 +321,7 @@ function ConferenceDetail({ conf, onBack }) {
             { icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z", label: "Location", value: `${conf.city}, ${conf.country}` },
             { icon: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18", label: "Dates", value: `${formatDate(conf.start)} \u2013 ${formatDate(conf.end)}` },
             { icon: "M12 6v6l4 2", label: "Duration", value: `${duration} days` },
-            { icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2", label: "Attendees", value: conf.attendees.toLocaleString() },
+            { icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2", label: "Attendees", value: conf.attendees ? conf.attendees.toLocaleString() : "TBA" },
           ].map((item, i) => (
             <div key={i} style={{ background: "rgba(30,41,59,0.4)", borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{item.label}</div>
