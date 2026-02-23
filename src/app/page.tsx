@@ -64,8 +64,6 @@ function transformConference(c: any) {
   };
 }
 
-const CATEGORIES = ["All", "Longevity / Health", "AI / Tech"];
-const FORMATS = ["All Formats", "In-person", "Virtual", "Hybrid"];
 
 function daysUntil(dateStr) {
   const d = new Date(dateStr);
