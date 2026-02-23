@@ -943,7 +943,7 @@ export default function App() {
 
             <h1 style={{
               fontSize: 52, fontWeight: 800, lineHeight: 1.1, margin: "0 0 16px",
-              background: "linear-gradient(135deg, #0f172a 0%, #475569 100%)",
+              
               color: "#f1f5f9",
               maxWidth: 700, marginLeft: "auto", marginRight: "auto",
             }}>
