@@ -606,9 +606,14 @@ export default function App() {
             <button onClick={() => onSave(form, isNew)} disabled={saving} style={{ ...S.btnPrimary, opacity: saving ? 0.6 : 1 }}>
               {saving ? "Saving..." : isNew ? "Save as Draft" : "Save Changes"}
             </button>
-            {isNew && (
+            {(isNew || form.status === "draft") && (
               <button onClick={() => onSave({ ...form, status: "active" }, isNew)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
                 {saving ? "Saving..." : "Publish"}
+              </button>
+            )}
+            {!isNew && form.status === "active" && (
+              <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>
+                {saving ? "Saving..." : "Unpublish"}
               </button>
             )}
           </div>
@@ -1040,6 +1045,11 @@ export default function App() {
             {(isNew || form.status === "draft") && (
               <button onClick={() => onSave({ ...form, status: "active" }, isNew)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
                 {saving ? "Saving..." : "Publish"}
+              </button>
+            )}
+            {!isNew && form.status === "active" && (
+              <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>
+                {saving ? "Saving..." : "Unpublish"}
               </button>
             )}
           </div>
