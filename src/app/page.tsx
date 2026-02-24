@@ -347,8 +347,7 @@ function ConferenceDetail({ conf, onBack }) {
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 28 }}>
+      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 28 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Pricing</h3>
 
           {/* Standard price - always shown */}
@@ -596,30 +595,42 @@ function ConferenceDetail({ conf, onBack }) {
           )}
         </div>
 
-        <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 28 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Speakers</h3>
-          {conf.speakers.map((s, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "12px 0",
-              borderBottom: i < conf.speakers.length - 1 ? "1px solid rgba(51,65,85,0.3)" : "none",
-            }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                background: `hsl(${i * 60 + 200}, 40%, 25%)`, fontSize: 16, fontWeight: 700, color: "#e2e8f0",
-              }}>{s.charAt(0)}</div>
-              <span style={{ fontSize: 14, color: "#e2e8f0", fontWeight: 500 }}>{s}</span>
-            </div>
-          ))}
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "28px 0 16px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Topics</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {conf.tags.map((t, i) => (
-              <span key={i} style={{
-                fontSize: 12, color: "#94a3b8", background: "rgba(51,65,85,0.4)", borderRadius: 6, padding: "5px 12px",
-              }}>{t}</span>
-            ))}
-          </div>
+      {(conf.speakers?.length > 0 || conf.tags?.length > 0) && (
+        <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 24, marginTop: 24 }}>
+          {conf.speakers?.length > 0 && (
+            <>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Speakers</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: conf.tags?.length > 0 ? 20 : 0 }}>
+                {conf.speakers.map((s, i) => (
+                  <span key={i} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "rgba(51,65,85,0.5)", border: "1px solid rgba(71,85,105,0.4)",
+                    borderRadius: 20, padding: "5px 12px 5px 6px",
+                  }}>
+                    <span style={{
+                      width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                      background: `hsl(${i * 60 + 200}, 40%, 30%)`, fontSize: 11, fontWeight: 700, color: "#e2e8f0", flexShrink: 0,
+                    }}>{s.charAt(0)}</span>
+                    <span style={{ fontSize: 13, color: "#cbd5e1", fontWeight: 500 }}>{s}</span>
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+          {conf.tags?.length > 0 && (
+            <>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Topics</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {conf.tags.map((t, i) => (
+                  <span key={i} style={{
+                    fontSize: 12, color: "#94a3b8", background: "rgba(51,65,85,0.4)", borderRadius: 6, padding: "5px 12px",
+                  }}>{t}</span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      )}
 
       {/* HOTEL SECTION */}
       {conf.hotels && conf.hotels.length > 0 && (
