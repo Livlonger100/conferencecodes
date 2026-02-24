@@ -822,7 +822,7 @@ export default function App() {
                 <div>
                   <label style={S.label}>Currency</label>
                   <select style={S.inputSm} value={tier.currency} onChange={e => updatePricing(i, "currency", e.target.value)}>
-                    <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option><option>CHF</option>
+                    <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option><option>CHF</option><option>AED</option>
                   </select>
                 </div>
                 <div>
