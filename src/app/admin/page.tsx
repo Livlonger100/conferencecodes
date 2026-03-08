@@ -268,7 +268,8 @@ OTHER RULES:
 // ============================================================
 // MAIN APP
 // ============================================================
-export default function App() {
+function AdminTool() {
+
   const [conferences, setConferences] = useState([]);
   const [view, setView] = useState("list"); // list | add | edit | detail
   const [editingConf, setEditingConf] = useState(null);
@@ -1295,6 +1296,62 @@ export default function App() {
         ::placeholder { color: #475569; }
         select { cursor: pointer; }
       `}</style>
+    </div>
+  );
+}
+
+export default function App() {
+  const [authed, setAuthed] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("admin_authed") === "1") setAuthed(true);
+    setAuthChecked(true);
+  }, []);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setPwLoading(true);
+    setPwError("");
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwInput }),
+    });
+    setPwLoading(false);
+    if (res.ok) {
+      sessionStorage.setItem("admin_authed", "1");
+      setAuthed(true);
+    } else {
+      setPwError("Incorrect password");
+      setPwInput("");
+    }
+  };
+
+  if (!authChecked) return null;
+
+  if (authed) return <AdminTool />;
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "inherit" }}>
+      <form onSubmit={handleLogin} style={{ background: "rgba(15,23,42,0.9)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 40, width: 320, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", textAlign: "center" }}>Admin</div>
+        <input
+          type="password"
+          placeholder="Password"
+          value={pwInput}
+          onChange={e => setPwInput(e.target.value)}
+          autoFocus
+          style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: `1px solid ${pwError ? "#ef4444" : "rgba(51,65,85,0.6)"}`, color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", outline: "none" }}
+        />
+        {pwError && <div style={{ fontSize: 13, color: "#ef4444", textAlign: "center" }}>{pwError}</div>}
+        <button type="submit" disabled={pwLoading || !pwInput} style={{ padding: "10px 0", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: pwLoading || !pwInput ? "not-allowed" : "pointer", opacity: pwLoading || !pwInput ? 0.6 : 1, fontFamily: "inherit" }}>
+          {pwLoading ? "Checking..." : "Enter"}
+        </button>
+      </form>
     </div>
   );
 }
