@@ -797,6 +797,11 @@ export default function App() {
   const [deepSearchQuery, setDeepSearchQuery] = useState("");
   const [deepSearching, setDeepSearching] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [submitModal, setSubmitModal] = useState(false);
+  const [submitUrl, setSubmitUrl] = useState("");
+  const [submitEmail, setSubmitEmail] = useState("");
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitDone, setSubmitDone] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -935,10 +940,10 @@ export default function App() {
             <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
               <span style={{ fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>How It Works</span>
               <span style={{ fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>For Organizers</span>
-              <button style={{
+              <button onClick={() => { setSubmitModal(true); setSubmitDone(false); setSubmitUrl(""); setSubmitEmail(""); }} style={{
                 background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)",
                 color: "#f97316", padding: "8px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              }}>Sign In</button>
+              }}>Submit a Conference</button>
             </div>
           </nav>
 
@@ -1261,6 +1266,62 @@ export default function App() {
         </div>
       </div>
       </>}
+
+      {/* Submit a Conference modal */}
+      {submitModal && (
+        <div onClick={() => setSubmitModal(false)} style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#0f172a", border: "1px solid rgba(51,65,85,0.6)", borderRadius: 20,
+            padding: 32, width: "100%", maxWidth: 420,
+          }}>
+            {submitDone ? (
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>Thanks for the tip!</div>
+                <div style={{ fontSize: 14, color: "#94a3b8", marginBottom: 24 }}>We'll review it and add it to the list if it's a good fit.</div>
+                <button onClick={() => setSubmitModal(false)} style={{ padding: "10px 28px", borderRadius: 8, background: "rgba(51,65,85,0.5)", border: "1px solid rgba(71,85,105,0.4)", color: "#f1f5f9", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Close</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>Submit a Conference</div>
+                <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 24 }}>Know a conference we're missing? Share the link.</div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Conference URL *</label>
+                  <input
+                    type="url" placeholder="https://..." value={submitUrl}
+                    onChange={e => setSubmitUrl(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: "1px solid rgba(51,65,85,0.6)", color: "#f1f5f9", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Your Email <span style={{ color: "#475569", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input
+                    type="email" placeholder="you@email.com" value={submitEmail}
+                    onChange={e => setSubmitEmail(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: "1px solid rgba(51,65,85,0.6)", color: "#f1f5f9", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setSubmitModal(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: "rgba(51,65,85,0.4)", border: "1px solid rgba(71,85,105,0.4)", color: "#94a3b8", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                  <button
+                    disabled={!submitUrl.trim() || submitLoading}
+                    onClick={async () => {
+                      setSubmitLoading(true);
+                      await fetch("/api/submissions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: submitUrl, email: submitEmail }) });
+                      setSubmitLoading(false);
+                      setSubmitDone(true);
+                    }}
+                    style={{ flex: 2, padding: "10px 0", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: !submitUrl.trim() || submitLoading ? "not-allowed" : "pointer", opacity: !submitUrl.trim() || submitLoading ? 0.6 : 1 }}
+                  >{submitLoading ? "Submitting..." : "Submit"}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
