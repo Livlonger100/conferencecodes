@@ -361,92 +361,64 @@ function ConferenceDetail({ conf, onBack }) {
       <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 28 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Pricing</h3>
 
-          {/* Standard price - always shown */}
+          {/* All pricing tiers */}
           {(() => {
-            const p = getCurrentPricing(conf);
-            const hasTimeTiers = conf.pricingTiers?.some(t => t.isTimeWindow);
-            
-            if (hasTimeTiers) {
-              // New model: dynamic rolling prices
+            const tiers = conf.pricingTiers || [];
+            const now = new Date();
+
+            if (tiers.length === 0) {
+              return <div style={{ fontSize: 14, color: "#64748b" }}>Pricing not available</div>;
+            }
+
+            // Determine the "current" tier: lowest active (non-sold-out) price among tiers whose deadline hasn't passed
+            const activeTiers = tiers.filter(t => !t.sold_out && t.price != null && (!t.deadline || new Date(t.deadline) >= now));
+            const currentPrice = activeTiers.length > 0 ? Math.min(...activeTiers.map(t => t.price)) : null;
+
+            return tiers.map((tier, i) => {
+              const isActive = !tier.sold_out && tier.price != null && (!tier.deadline || new Date(tier.deadline) >= now);
+              const isCurrent = isActive && tier.price === currentPrice;
+              const deadlinePassed = tier.deadline && new Date(tier.deadline) < now;
+              const daysLeft = tier.deadline && !deadlinePassed ? daysUntil(tier.deadline) : null;
+              const urgent = daysLeft !== null && daysLeft <= 7;
+
               return (
-                <>
-                  {/* Current price with countdown */}
-                  <div style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 12, padding: 16, marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 600, marginBottom: 4 }}>CURRENT PRICE — {p.label.toUpperCase()}</div>
-                        <div style={{ fontSize: 28, fontWeight: 800, color: "#f97316" }}>{formatPrice(p.currentPrice)}</div>
-                        <DynamicPricingBadge conf={conf} />
+                <div key={i} style={{
+                  background: isCurrent ? "rgba(249,115,22,0.08)" : "rgba(30,41,59,0.4)",
+                  border: `1px solid ${isCurrent ? "rgba(249,115,22,0.25)" : "rgba(51,65,85,0.4)"}`,
+                  borderRadius: 12, padding: "14px 16px", marginBottom: 8,
+                  opacity: (tier.sold_out || deadlinePassed) ? 0.5 : 1,
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: isCurrent ? "#fb923c" : "#94a3b8", marginBottom: tier.deadline || tier.priceAfterDeadline ? 4 : 0 }}>
+                        {tier.label}
+                        {tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#ef4444", fontWeight: 700 }}>SOLD OUT</span>}
+                        {tier.requires_approval && !tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#94a3b8" }}>requires approval</span>}
                       </div>
-                      {p.currentPrice < p.standardPrice && (
-                        <div style={{
-                          background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)",
-                          borderRadius: 8, padding: "6px 12px", textAlign: "center",
-                        }}>
-                          <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>YOU SAVE</div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: "#22c55e" }}>{formatPrice(p.standardPrice - p.currentPrice)}</div>
-                          <div style={{ fontSize: 10, color: "#4ade80" }}>{Math.round((1 - p.currentPrice / p.standardPrice) * 100)}% off</div>
+                      {tier.deadline && (
+                        <div style={{ fontSize: 11, color: deadlinePassed ? "#64748b" : urgent ? "#ef4444" : "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          {deadlinePassed ? `Deadline passed (${formatDate(tier.deadline)})` : `Deadline: ${formatDate(tier.deadline)} — ${daysLeft}d left`}
+                        </div>
+                      )}
+                      {tier.priceAfterDeadline && !deadlinePassed && (
+                        <div style={{ fontSize: 11, color: "#f97316", marginTop: 2 }}>
+                          ↑ rises to {formatPrice(tier.priceAfterDeadline)} after deadline
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Full price shown with strikethrough */}
-                  {p.currentPrice < p.standardPrice && (
-                    <div style={{ background: "rgba(30,41,59,0.4)", borderRadius: 12, padding: 16, marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, marginBottom: 4 }}>ON-SITE PRICE</div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: "#94a3b8", textDecoration: "line-through" }}>{formatPrice(p.standardPrice)}</div>
-                    </div>
-                  )}
-
-                  {/* Special tiers (Student, etc.) */}
-                  {p.specialTiers?.length > 0 && p.specialTiers.map((tier, i) => (
-                    <div key={i} style={{ background: "rgba(30,41,59,0.4)", borderRadius: 12, padding: 12, marginBottom: 8 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>{tier.label.toUpperCase()}</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: "#e2e8f0" }}>{formatPrice(tier.price)}</span>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: isCurrent ? "#f97316" : tier.sold_out || deadlinePassed ? "#475569" : "#e2e8f0" }}>
+                        {formatPrice(tier.price)}
                       </div>
+                      {tier.priceAfterDeadline && !deadlinePassed && (
+                        <div style={{ fontSize: 12, color: "#64748b", textDecoration: "line-through" }}>{formatPrice(tier.priceAfterDeadline)}</div>
+                      )}
                     </div>
-                  ))}
-                </>
-              );
-            }
-            
-            // Old model: simple earlyBird / price
-            return (
-              <>
-                <div style={{ background: "rgba(30,41,59,0.4)", borderRadius: 12, padding: 16, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, marginBottom: 4 }}>STANDARD PRICE</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: conf.earlyBird ? "#94a3b8" : "#1e293b", textDecoration: conf.earlyBird ? "line-through" : "none" }}>{formatPrice(conf.price)}</div>
-                    </div>
-                    {!conf.earlyBird && !conf.discount && (
-                      <div style={{ fontSize: 12, color: "#94a3b8" }}>Current price</div>
-                    )}
                   </div>
                 </div>
-                {conf.earlyBird && (
-                  <div style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 12, padding: 16, marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 600, marginBottom: 4 }}>EARLY BIRD</div>
-                        <div style={{ fontSize: 28, fontWeight: 800, color: "#f97316" }}>{formatPrice(conf.earlyBird)}</div>
-                        <DynamicPricingBadge conf={conf} />
-                      </div>
-                      <div style={{
-                        background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)",
-                        borderRadius: 8, padding: "6px 12px", textAlign: "center",
-                      }}>
-                        <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>YOU SAVE</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#22c55e" }}>{formatPrice(conf.price - conf.earlyBird)}</div>
-                        <div style={{ fontSize: 10, color: "#4ade80" }}>{Math.round((1 - conf.earlyBird / conf.price) * 100)}% off</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            );
+              );
+            });
           })()}
 
           {/* CC code - show additional savings stacked on current price */}
