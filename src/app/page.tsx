@@ -860,12 +860,11 @@ export default function App() {
     dateFrom !== "",
     dateTo !== "",
     format !== "All Formats",
-    maxPrice < 10000,
   ].filter(Boolean).length;
 
   const clearFilters = () => {
     setCategory("All"); setLocationQuery(""); setDateFrom(""); setDateTo("");
-    setFormat("All Formats"); setMaxPrice(10000); setSearchQuery("");
+    setFormat("All Formats"); setSearchQuery("");
   };
 
   const handleDeepSearch = () => {
@@ -948,180 +947,135 @@ export default function App() {
           </nav>
 
           {/* Hero content */}
-          <div style={{ textAlign: "center", padding: "60px 0 48px" }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20,
-              background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 100, padding: "6px 16px",
-            }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite" }} />
-              <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 600, letterSpacing: 0.5 }}>Every listing verified against source</span>
-            </div>
-
-            <h1 style={{
-              fontSize: 52, fontWeight: 800, lineHeight: 1.1, margin: "0 0 16px",
-              
-              color: "#f1f5f9",
-              maxWidth: 700, marginLeft: "auto", marginRight: "auto",
-            }}>
-              Verified conferences.<br />Exclusive codes.
+          <div style={{ textAlign: "center", padding: "24px 0 20px" }}>
+            <h1 style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.2, margin: "0 0 0", color: "#f1f5f9" }}>
+              Verified conferences. Exclusive codes.{" "}
+              <span style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8", whiteSpace: "nowrap" }}>({CONFERENCES.length} verified)</span>
             </h1>
-            <p style={{ fontSize: 18, color: "#64748b", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.6 }}>
-              Every listing checked against the source. Every code saves you 5-10%.<br />No ghost listings. No stale data. No BS.
-            </p>
-
-            {/* Stats bar */}
-            <div style={{ display: "flex", justifyContent: "center", gap: 40, marginBottom: 8 }}>
-              {[
-                { n: String(CONFERENCES.length), label: "Verified Conferences" },
-                
-                
-              ].map((s, i) => (
-                <div key={i} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#f97316", fontFamily: "'Space Mono', monospace" }}>{s.n}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 0.5, textTransform: "uppercase" }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
 
       {/* MAIN CONTENT */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 32px 80px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 32px 80px" }}>
         {selectedConf ? (
           <ConferenceDetail conf={selectedConf} onBack={() => setSelectedConf(null)} />
         ) : (
           <>
             {/* SEARCH & FILTERS */}
             <div style={{
-              background: "#0f172a", border: "1px solid rgba(51,65,85,0.5)",
-              borderRadius: 16, padding: 24, marginBottom: 32,
+              background: "#0f172a", border: "1px solid rgba(100,116,139,0.4)",
+              borderRadius: 16, padding: "16px 20px", marginBottom: 24,
               boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
             }}>
               {/* Search bar */}
-              <div style={{ position: "relative", marginBottom: 20 }}>
+              <div style={{ position: "relative", marginBottom: 12 }}>
                 <svg style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input
                   type="text" placeholder="Search conferences, speakers, topics..."
                   value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                   style={{
-                    width: "100%", padding: "14px 16px 14px 48px", borderRadius: 12,
-                    background: "rgba(30,41,59,0.4)", border: "1px solid rgba(51,65,85,0.5)",
-                    color: "#e2e8f0", fontSize: 15, fontFamily: "inherit",
+                    width: "100%", padding: "12px 16px 12px 48px", borderRadius: 10,
+                    background: "rgba(30,41,59,0.6)", border: "1px solid rgba(100,116,139,0.5)",
+                    color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", outline: "none",
                   }}
                 />
               </div>
 
-              {/* Filter row 1: Category + Location */}
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-                <div style={{ flex: "1 1 180px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Category</div>
+              {/* Single filter row: Category | Location | Format | From | To */}
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 140px", minWidth: 120 }}>
+                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Category</div>
                   <select value={category} onChange={e => setCategory(e.target.value)} style={{
-                    width: "100%", padding: "10px 14px", borderRadius: 10,
+                    width: "100%", padding: "8px 12px", borderRadius: 8,
                     background: category !== "All" ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                    border: category !== "All" ? "1px solid rgba(249,115,22,0.3)" : "1px solid rgba(51,65,85,0.5)",
-                    color: category !== "All" ? "#f97316" : "#334155", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                    border: category !== "All" ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
+                    color: category !== "All" ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
                     appearance: "none", WebkitAppearance: "none", outline: "none",
                   }}>
                     {CATEGORIES.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
 
-                <div style={{ flex: "2 1 250px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>City, Country, or Region</div>
+                <div style={{ flex: "2 1 180px", minWidth: 140 }}>
+                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Location</div>
                   <div style={{ position: "relative" }}>
-                    <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                     <input
-                      type="text" placeholder='e.g. "London", "UK", "Europe", "Spain"'
+                      type="text" placeholder="City, country, region…"
                       value={locationQuery} onChange={e => setLocationQuery(e.target.value)}
                       style={{
-                        width: "100%", padding: "10px 14px 10px 34px", borderRadius: 10,
+                        width: "100%", padding: "8px 28px 8px 28px", borderRadius: 8,
                         background: locationQuery ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                        border: locationQuery ? "1px solid rgba(249,115,22,0.3)" : "1px solid rgba(51,65,85,0.5)",
-                        color: locationQuery ? "#f97316" : "#334155", fontSize: 13, fontFamily: "inherit", outline: "none",
+                        border: locationQuery ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
+                        color: locationQuery ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", outline: "none",
                       }}
                     />
                     {locationQuery && (
                       <button onClick={() => setLocationQuery("")} style={{
-                        position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-                        background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 16, padding: 4,
-                      }}>\u00d7</button>
+                        position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                        background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 16, padding: 2,
+                      }}>&times;</button>
                     )}
                   </div>
                 </div>
-              </div>
 
-              {/* Filter row 2: Date range + Format + Price */}
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-                <div style={{ flex: "1 1 160px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>From</div>
-                  <input
-                    type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                    style={{
-                      width: "100%", padding: "10px 14px", borderRadius: 10,
-                      background: dateFrom ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                      border: dateFrom ? "1px solid rgba(249,115,22,0.3)" : "1px solid rgba(51,65,85,0.5)",
-                      color: dateFrom ? "#f97316" : "#334155", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      colorScheme: "dark",
-                    }}
-                  />
-                </div>
-                <div style={{ flex: "1 1 160px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>To</div>
-                  <input
-                    type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                    style={{
-                      width: "100%", padding: "10px 14px", borderRadius: 10,
-                      background: dateTo ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                      border: dateTo ? "1px solid rgba(249,115,22,0.3)" : "1px solid rgba(51,65,85,0.5)",
-                      color: dateTo ? "#f97316" : "#334155", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      colorScheme: "dark",
-                    }}
-                  />
-                </div>
-                {/* Quick date presets */}
-                <div style={{ flex: "2 1 300px", display: "flex", gap: 6, flexWrap: "wrap", paddingBottom: 2 }}>
-                  {[
-                    { label: "This month", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n.getFullYear(), n.getMonth() + 1, 0); setDateTo(e.toISOString().split("T")[0]); }},
-                    { label: "Next 30 days", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n); e.setDate(e.getDate() + 30); setDateTo(e.toISOString().split("T")[0]); }},
-                    { label: "Next 3 months", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n); e.setMonth(e.getMonth() + 3); setDateTo(e.toISOString().split("T")[0]); }},
-                    { label: "Q2 2026", fn: () => { setDateFrom("2026-04-01"); setDateTo("2026-06-30"); }},
-                    { label: "Q3 2026", fn: () => { setDateFrom("2026-07-01"); setDateTo("2026-09-30"); }},
-                    { label: "Summer", fn: () => { setDateFrom("2026-06-01"); setDateTo("2026-08-31"); }},
-                  ].map((p, i) => (
-                    <button key={i} onClick={p.fn} style={{
-                      padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                      background: "rgba(30,41,59,0.4)", border: "1px solid rgba(51,65,85,0.4)",
-                      color: "#94a3b8", cursor: "pointer", fontFamily: "inherit",
-                      whiteSpace: "nowrap",
-                    }}>{p.label}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Filter row 3: Format + Price */}
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
-                <div style={{ flex: "1 1 140px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Format</div>
+                <div style={{ flex: "1 1 120px", minWidth: 110 }}>
+                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Format</div>
                   <select value={format} onChange={e => setFormat(e.target.value)} style={{
-                    width: "100%", padding: "10px 14px", borderRadius: 10,
+                    width: "100%", padding: "8px 12px", borderRadius: 8,
                     background: format !== "All Formats" ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                    border: format !== "All Formats" ? "1px solid rgba(249,115,22,0.3)" : "1px solid rgba(51,65,85,0.5)",
-                    color: format !== "All Formats" ? "#f97316" : "#334155", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                    border: format !== "All Formats" ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
+                    color: format !== "All Formats" ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
                     appearance: "none", WebkitAppearance: "none", outline: "none",
                   }}>
                     {FORMATS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-                <div style={{ flex: "1 1 200px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Max Price</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <input type="range" min={0} max={10000} step={100} value={maxPrice} onChange={e => setMaxPrice(Number(e.target.value))}
-                      style={{ flex: 1, accentColor: "#f97316" }} />
-                    <span style={{ fontSize: 13, color: "#f97316", fontWeight: 700, fontFamily: "'Space Mono', monospace", minWidth: 60 }}>
-                      {maxPrice >= 10000 ? "Any" : formatPrice(maxPrice)}
-                    </span>
-                  </div>
+
+                <div style={{ flex: "1 1 130px", minWidth: 120 }}>
+                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>From</div>
+                  <input
+                    type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                    style={{
+                      width: "100%", padding: "8px 10px", borderRadius: 8,
+                      background: dateFrom ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
+                      border: dateFrom ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
+                      color: dateFrom ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", outline: "none",
+                      colorScheme: "dark",
+                    }}
+                  />
+                </div>
+
+                <div style={{ flex: "1 1 130px", minWidth: 120 }}>
+                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>To</div>
+                  <input
+                    type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                    style={{
+                      width: "100%", padding: "8px 10px", borderRadius: 8,
+                      background: dateTo ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
+                      border: dateTo ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
+                      color: dateTo ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", outline: "none",
+                      colorScheme: "dark",
+                    }}
+                  />
+                </div>
+
+                {/* Quick date presets */}
+                <div style={{ flex: "2 1 260px", display: "flex", gap: 5, flexWrap: "wrap", paddingBottom: 1 }}>
+                  {[
+                    { label: "This month", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n.getFullYear(), n.getMonth() + 1, 0); setDateTo(e.toISOString().split("T")[0]); }},
+                    { label: "Next 30d", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n); e.setDate(e.getDate() + 30); setDateTo(e.toISOString().split("T")[0]); }},
+                    { label: "Next 3mo", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n); e.setMonth(e.getMonth() + 3); setDateTo(e.toISOString().split("T")[0]); }},
+                    { label: "Q2 2026", fn: () => { setDateFrom("2026-04-01"); setDateTo("2026-06-30"); }},
+                    { label: "Q3 2026", fn: () => { setDateFrom("2026-07-01"); setDateTo("2026-09-30"); }},
+                  ].map((p, i) => (
+                    <button key={i} onClick={p.fn} style={{
+                      padding: "5px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      background: "rgba(30,41,59,0.4)", border: "1px solid rgba(100,116,139,0.4)",
+                      color: "#94a3b8", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                    }}>{p.label}</button>
+                  ))}
                 </div>
               </div>
 
