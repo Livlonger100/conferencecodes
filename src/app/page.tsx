@@ -922,7 +922,7 @@ export default function App() {
         <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "0 32px" }}>
           {/* Nav */}
           <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
               <div style={{
                 width: 36, height: 36, borderRadius: 10,
                 background: "linear-gradient(135deg, #f97316, #ea580c)",
@@ -935,7 +935,7 @@ export default function App() {
                 <span style={{ color: "#f1f5f9" }}>Conference</span>
                 <span style={{ color: "#f97316" }}>Codes</span>
               </span>
-            </div>
+            </a>
             <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
               <span style={{ fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>How It Works</span>
               <span style={{ fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>For Organizers</span>
@@ -974,12 +974,21 @@ export default function App() {
                 <input
                   type="text" placeholder="Search conferences, speakers, topics..."
                   value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                   style={{
-                    width: "100%", padding: "12px 16px 12px 48px", borderRadius: 10,
+                    width: "100%", padding: "12px 110px 12px 48px", borderRadius: 10,
                     background: "rgba(30,41,59,0.6)", border: "1px solid rgba(100,116,139,0.5)",
                     color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", outline: "none",
                   }}
                 />
+                <button
+                  onClick={() => (document.activeElement as HTMLElement)?.blur()}
+                  style={{
+                    position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                    padding: "7px 20px", borderRadius: 7,
+                    background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none",
+                    color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  }}>Search</button>
               </div>
 
               {/* Single filter row: Category | Location | Format | From | To */}
