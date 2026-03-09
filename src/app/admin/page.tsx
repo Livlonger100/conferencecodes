@@ -530,24 +530,24 @@ function AdminTool() {
   // STYLES
   // ============================================================
   const S = {
-    page: { minHeight: "100vh", background: "#0a0f1a", color: "#e2e8f0", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
-    header: { background: "rgba(15,23,42,0.95)", borderBottom: "1px solid rgba(51,65,85,0.3)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 },
+    page: { minHeight: "100vh", background: "#f8f9fa", color: "#374151", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
+    header: { background: "rgba(15,23,42,0.98)", borderBottom: "1px solid rgba(0,0,0,0.2)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 },
     logo: { display: "flex", alignItems: "center", gap: 10 },
     logoIcon: { width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(249,115,22,0.3)" },
     container: { maxWidth: 1100, margin: "0 auto", padding: "24px 32px" },
-    card: { background: "#0f172a", border: "1px solid rgba(51,65,85,0.4)", borderRadius: 14, padding: 20, marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.2)" },
-    input: { width: "100%", padding: "10px 14px", borderRadius: 8, background: "rgba(30,41,59,0.6)", border: "1px solid rgba(51,65,85,0.5)", color: "#e2e8f0", fontSize: 13, fontFamily: "inherit", outline: "none" },
-    inputSm: { padding: "8px 12px", borderRadius: 6, background: "rgba(30,41,59,0.6)", border: "1px solid rgba(51,65,85,0.5)", color: "#e2e8f0", fontSize: 12, fontFamily: "inherit", outline: "none" },
-    label: { fontSize: 10, color: "#64748b", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4, display: "block" },
-    btnPrimary: { padding: "10px 20px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(249,115,22,0.3)" },
-    btnSecondary: { padding: "10px 20px", borderRadius: 8, background: "rgba(30,41,59,0.6)", border: "1px solid rgba(51,65,85,0.5)", color: "#94a3b8", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
-    btnDanger: { padding: "8px 16px", borderRadius: 6, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
-    btnGhost: { padding: "6px 12px", borderRadius: 6, background: "none", border: "none", color: "#64748b", fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
+    card: { background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 14, padding: 20, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
+    input: { width: "100%", padding: "10px 14px", borderRadius: 8, background: "#ffffff", border: "1px solid #d1d5db", color: "#111827", fontSize: 13, fontFamily: "inherit", outline: "none" },
+    inputSm: { padding: "8px 12px", borderRadius: 6, background: "#ffffff", border: "1px solid #d1d5db", color: "#111827", fontSize: 12, fontFamily: "inherit", outline: "none" },
+    label: { fontSize: 10, color: "#374151", fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4, display: "block" },
+    btnPrimary: { padding: "10px 20px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(249,115,22,0.25)" },
+    btnSecondary: { padding: "10px 20px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+    btnDanger: { padding: "8px 16px", borderRadius: 6, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+    btnGhost: { padding: "6px 12px", borderRadius: 6, background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
     grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
     grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 },
     grid4: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 },
     tag: { display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 4 },
-    divider: { borderTop: "1px solid rgba(51,65,85,0.3)", margin: "16px 0" },
+    divider: { borderTop: "1px solid #e5e7eb", margin: "16px 0" },
   };
 
   // ============================================================
@@ -592,7 +592,7 @@ function AdminTool() {
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9", margin: 0 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: 0 }}>
             {isNew ? "Add Conference" : `Edit: ${form.name}`}
           </h2>
           <div style={{ display: "flex", gap: 8 }}>
@@ -635,19 +635,19 @@ function AdminTool() {
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316" }}>{form.discount_pct}% off</div>
-                {form.discount_max_uses && <div style={{ fontSize: 11, color: "#94a3b8" }}>Limit: {form.discount_max_uses} uses</div>}
+                {form.discount_max_uses && <div style={{ fontSize: 11, color: "#6b7280" }}>Limit: {form.discount_max_uses} uses</div>}
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ ...S.card, background: "rgba(100,116,139,0.05)", border: "1px dashed rgba(100,116,139,0.3)", marginBottom: 20 }}>
+          <div style={{ ...S.card, background: "#fafafa", border: "1px dashed #d1d5db", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(100,116,139,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}>No discount code yet</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>Scroll to "CC Discount Code" section to add one after organizer agreement</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>No discount code yet</div>
+                <div style={{ fontSize: 11, color: "#6b7280" }}>Scroll to "CC Discount Code" section to add one after organizer agreement</div>
               </div>
             </div>
           </div>
@@ -656,7 +656,7 @@ function AdminTool() {
         {form.extraction_notes && (
           <div style={{ ...S.card, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", marginBottom: 4 }}>EXTRACTION NOTES</div>
-            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>{form.extraction_notes}</div>
+            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{form.extraction_notes}</div>
           </div>
         )}
 
@@ -667,12 +667,12 @@ function AdminTool() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>Prices couldn't be auto-extracted</span>
             </div>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Many ticketing platforms load prices via JavaScript. Enter the prices manually below:</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>Many ticketing platforms load prices via JavaScript. Enter the prices manually below:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {form.pricing.map((tier, i) => tier.price === null ? (
                 <div key={tier.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", minWidth: 160 }}>{tier.tier || `Tier ${i+1}`}</span>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>$</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", minWidth: 160 }}>{tier.tier || `Tier ${i+1}`}</span>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>$</span>
                   <input
                     style={{ ...S.inputSm, width: 100, fontWeight: 700, fontSize: 14 }}
                     type="number"
@@ -682,7 +682,7 @@ function AdminTool() {
                       updatePricing(i, "price", val);
                     }}
                   />
-                  <span style={{ fontSize: 11, color: "#94a3b8" }}>{tier.currency}</span>
+                  <span style={{ fontSize: 11, color: "#6b7280" }}>{tier.currency}</span>
                   {tier.deadline_passed && <span style={{ fontSize: 10, color: "#ef4444", fontWeight: 600 }}>EXPIRED</span>}
                   {tier.requires_approval && <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>APPROVAL</span>}
                 </div>
@@ -792,13 +792,13 @@ function AdminTool() {
             <button onClick={addPricingTier} style={S.btnSecondary}>+ Add Tier</button>
           </div>
           {form.pricing.length === 0 && (
-            <div style={{ color: "#64748b", fontSize: 13, fontStyle: "italic" }}>No pricing tiers yet. Add one above.</div>
+            <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>No pricing tiers yet. Add one above.</div>
           )}
           {form.pricing.map((tier, i) => {
             const isExpired = tier.deadline_passed || (tier.deadline && tier.deadline < TODAY);
             const isSoldOut = !!tier.sold_out;
             return (
-            <div key={tier.id} style={{ background: isSoldOut ? "rgba(239,68,68,0.06)" : isExpired ? "rgba(239,68,68,0.03)" : "rgba(30,41,59,0.4)", borderRadius: 10, padding: 16, marginBottom: 8, border: isSoldOut ? "1px solid rgba(239,68,68,0.3)" : isExpired ? "1px solid rgba(239,68,68,0.15)" : "1px solid rgba(51,65,85,0.3)", opacity: isSoldOut ? 0.7 : 1 }}>
+            <div key={tier.id} style={{ background: isSoldOut ? "rgba(239,68,68,0.05)" : isExpired ? "#fafafa" : "#f9fafb", borderRadius: 10, padding: 16, marginBottom: 8, border: isSoldOut ? "1px solid rgba(239,68,68,0.25)" : isExpired ? "1px solid #f3f4f6" : "1px solid #e5e7eb", opacity: isSoldOut ? 0.7 : 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: isSoldOut ? "#ef4444" : isExpired ? "#ef4444" : "#1e293b" }}>Tier {i + 1}{isSoldOut ? " (SOLD OUT)" : isExpired ? " (EXPIRED)" : ""}</span>
@@ -837,19 +837,19 @@ function AdminTool() {
                   <input style={S.inputSm} value={tier.days_included || ""} onChange={e => updatePricing(i, "days_included", e.target.value)} placeholder='"all" or "Day 1 only"' />
                 </div>
                 <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#94a3b8" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#6b7280" }}>
                     <input type="checkbox" checked={!!tier.deadline_passed} onChange={e => updatePricing(i, "deadline_passed", e.target.checked)} />
                     Deadline passed
                   </label>
                 </div>
                 <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#94a3b8" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#6b7280" }}>
                     <input type="checkbox" checked={!!tier.requires_approval} onChange={e => updatePricing(i, "requires_approval", e.target.checked)} />
                     Requires approval
                   </label>
                 </div>
                 <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: isSoldOut ? "#ef4444" : "#94a3b8" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: isSoldOut ? "#ef4444" : "#374151" }}>
                     <input type="checkbox" checked={isSoldOut} onChange={e => updatePricing(i, "sold_out", e.target.checked)} />
                     Sold out
                   </label>
@@ -894,10 +894,10 @@ function AdminTool() {
             <button onClick={addHotel} style={S.btnSecondary}>+ Add Hotel</button>
           </div>
           {form.hotels.length === 0 && (
-            <div style={{ color: "#64748b", fontSize: 13, fontStyle: "italic" }}>No hotel partners found. Add one or extraction may not have found hotel info.</div>
+            <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>No hotel partners found. Add one or extraction may not have found hotel info.</div>
           )}
           {form.hotels.map((hotel, i) => (
-            <div key={hotel.id} style={{ background: "rgba(30,41,59,0.4)", borderRadius: 10, padding: 16, marginBottom: 8, border: "1px solid rgba(96,165,250,0.15)" }}>
+            <div key={hotel.id} style={{ background: "#f0f7ff", borderRadius: 10, padding: 16, marginBottom: 8, border: "1px solid rgba(96,165,250,0.25)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa" }}>Hotel {i + 1}</span>
                 <button onClick={() => removeHotel(i)} style={{ ...S.btnGhost, color: "#ef4444" }}>Remove</button>
@@ -956,7 +956,7 @@ function AdminTool() {
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {form.speakers.map((s, i) => (
-                  <span key={i} style={{ ...S.tag, background: "rgba(51,65,85,0.4)", color: "#cbd5e1", cursor: "pointer" }} onClick={() => removeSpeaker(i)}>{s} ×</span>
+                  <span key={i} style={{ ...S.tag, background: "#e5e7eb", color: "#374151", cursor: "pointer" }} onClick={() => removeSpeaker(i)}>{s} ×</span>
                 ))}
               </div>
             </div>
@@ -1079,18 +1079,18 @@ function AdminTool() {
       {/* Duplicate Warning Modal */}
       {dupeWarning && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "#0f172a", borderRadius: 16, padding: 28, maxWidth: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+          <div style={{ background: "#ffffff", borderRadius: 16, padding: 28, maxWidth: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.15)", border: "1px solid #e5e7eb" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <span style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>Possible Duplicate</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Possible Duplicate</span>
             </div>
-            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>This looks similar to:</div>
+            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>This looks similar to:</div>
             {dupeWarning.dupes.map((d, i) => (
-              <div key={i} style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", padding: "6px 0" }}>
+              <div key={i} style={{ fontSize: 14, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
                 {d.name} — {d.city}, {d.start}
               </div>
             ))}
-            <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 10, marginBottom: 18 }}>Save anyway?</div>
+            <div style={{ fontSize: 13, color: "#6b7280", marginTop: 10, marginBottom: 18 }}>Save anyway?</div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setDupeWarning(null)} style={S.btnSecondary}>Cancel</button>
               <button onClick={() => { const { conf, isNew } = dupeWarning; setDupeWarning("override"); handleSave(conf, isNew); }} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f59e0b, #d97706)" }}>Save Anyway</button>
@@ -1106,7 +1106,7 @@ function AdminTool() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
           <span style={{ fontSize: 18, fontWeight: 800, color: "#f1f5f9" }}>Conference<span style={{ color: "#f97316" }}>Codes</span></span>
-          <span style={{ fontSize: 11, color: "#64748b", background: "rgba(51,65,85,0.3)", padding: "2px 8px", borderRadius: 4, marginLeft: 4 }}>ADMIN</span>
+          <span style={{ fontSize: 11, color: "#94a3b8", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 4, marginLeft: 4 }}>ADMIN</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => { setView("list"); setEditingConf(null); setExtractedData(null); }} style={view === "list" ? S.btnPrimary : S.btnSecondary}>All Conferences</button>
@@ -1118,12 +1118,12 @@ function AdminTool() {
         {/* ============ ADD VIEW ============ */}
         {view === "add" && !extractedData && (
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9", marginBottom: 20 }}>Add Conference</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 20 }}>Add Conference</h2>
 
             {/* URL EXTRACT */}
             <div style={{ ...S.card, border: "1px solid rgba(249,115,22,0.3)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 4 }}>PASTE URL(s) — Claude will extract everything</div>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Paste the main page URL. If pricing is on a separate registration page, paste that URL too (one per line).</div>
+              <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>Paste the main page URL. If pricing is on a separate registration page, paste that URL too (one per line).</div>
               <div style={{ display: "flex", gap: 12 }}>
                 <textarea
                   style={{ ...S.input, flex: 1, fontSize: 14, minHeight: 56, resize: "vertical", fontFamily: "monospace" }}
@@ -1147,7 +1147,7 @@ function AdminTool() {
               )}
             </div>
 
-            <div style={{ textAlign: "center", color: "#94a3b8", margin: "20px 0", fontSize: 13 }}>— or —</div>
+            <div style={{ textAlign: "center", color: "#6b7280", margin: "20px 0", fontSize: 13 }}>— or —</div>
 
             {/* MANUAL ENTRY */}
             <button onClick={() => {
@@ -1192,7 +1192,7 @@ function AdminTool() {
             {/* Stats */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
               {[
-                { label: "Total", count: counts.all, color: "#f1f5f9" },
+                { label: "Total", count: counts.all, color: "#111827" },
                 { label: "Active", count: counts.active, color: "#22c55e" },
                 { label: "Draft", count: counts.draft, color: "#f97316" },
                 { label: "Expired", count: counts.expired, color: "#ef4444" },
@@ -1200,7 +1200,7 @@ function AdminTool() {
                 <div key={i} style={{ ...S.card, textAlign: "center", cursor: "pointer", border: filterStatus === s.label.toLowerCase() ? `1px solid ${s.color}` : undefined }}
                   onClick={() => setFilterStatus(filterStatus === s.label.toLowerCase() ? "all" : s.label.toLowerCase())}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: s.color, fontFamily: "monospace" }}>{s.count}</div>
-                  <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -1218,7 +1218,7 @@ function AdminTool() {
 
             {/* Conference list */}
             {filtered.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+              <div style={{ textAlign: "center", padding: 60, color: "#6b7280" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>&#128269;</div>
                 <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No conferences yet</div>
                 <div style={{ fontSize: 13 }}>Click "+ Add New" to extract your first conference from a URL</div>
@@ -1245,12 +1245,12 @@ function AdminTool() {
                           <span style={{ ...S.tag, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e" }}>FREE TIER</span>
                         )}
                       </div>
-                      <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{conf.name || "Untitled"}</div>
-                      <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                      <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{conf.name || "Untitled"}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>
                         {conf.city && conf.country ? `${conf.city}, ${conf.country}` : "Location TBD"}
                         {conf.start && ` \u00b7 ${new Date(conf.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
                         {conf.end && conf.end !== conf.start && ` \u2013 ${new Date(conf.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                        {duration && <span style={{ color: "#64748b" }}> \u00b7 {duration} day{duration !== 1 ? "s" : ""}</span>}
+                        {duration && <span style={{ color: "#6b7280" }}> \u00b7 {duration} day{duration !== 1 ? "s" : ""}</span>}
                         {daysAway !== null && daysAway > 0 && <span style={{ color: daysAway < 30 ? "#f97316" : "#64748b" }}> \u00b7 {daysAway}d away</span>}
                       </div>
                     </div>
@@ -1261,11 +1261,11 @@ function AdminTool() {
                         </div>
                       )}
                       {conf.pricing?.length > 1 && lowestPrice !== null && lowestPrice !== mainPrice?.price && (
-                        <div style={{ fontSize: 11, color: "#64748b" }}>
+                        <div style={{ fontSize: 11, color: "#6b7280" }}>
                           {lowestPrice === 0 ? "Free" : `from $${lowestPrice.toLocaleString()}`}
                         </div>
                       )}
-                      <div style={{ fontSize: 11, color: "#64748b" }}>
+                      <div style={{ fontSize: 11, color: "#6b7280" }}>
                         {conf.pricing?.length || 0} tier{conf.pricing?.length !== 1 ? "s" : ""}
                         {conf.hotels?.length > 0 && ` \u00b7 ${conf.hotels.length} hotel${conf.hotels.length !== 1 ? "s" : ""}`}
                       </div>
@@ -1292,9 +1292,10 @@ function AdminTool() {
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
-        input:focus, select:focus, textarea:focus { border-color: rgba(249,115,22,0.5) !important; }
-        ::placeholder { color: #475569; }
+        input:focus, select:focus, textarea:focus { border-color: #f97316 !important; box-shadow: 0 0 0 3px rgba(249,115,22,0.1) !important; }
+        ::placeholder { color: #9ca3af; }
         select { cursor: pointer; }
+        select option { background: #ffffff; color: #111827; }
       `}</style>
     </div>
   );
@@ -1338,14 +1339,14 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "inherit" }}>
       <form onSubmit={handleLogin} style={{ background: "rgba(15,23,42,0.9)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 40, width: 320, display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", textAlign: "center" }}>Admin</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "#111827", textAlign: "center" }}>Admin</div>
         <input
           type="password"
           placeholder="Password"
           value={pwInput}
           onChange={e => setPwInput(e.target.value)}
           autoFocus
-          style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: `1px solid ${pwError ? "#ef4444" : "rgba(51,65,85,0.6)"}`, color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", outline: "none" }}
+          style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: `1px solid ${pwError ? "#ef4444" : "rgba(51,65,85,0.6)"}`, color: "#111827", fontSize: 15, fontFamily: "inherit", outline: "none" }}
         />
         {pwError && <div style={{ fontSize: 13, color: "#ef4444", textAlign: "center" }}>{pwError}</div>}
         <button type="submit" disabled={pwLoading || !pwInput} style={{ padding: "10px 0", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: pwLoading || !pwInput ? "not-allowed" : "pointer", opacity: pwLoading || !pwInput ? 0.6 : 1, fontFamily: "inherit" }}>
