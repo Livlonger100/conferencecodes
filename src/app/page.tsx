@@ -937,8 +937,8 @@ export default function App() {
               </span>
             </a>
             <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>How It Works</span>
-              <span style={{ fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>For Organizers</span>
+              <a href="/how-it-works" style={{ fontSize: 13, color: "#94a3b8", textDecoration: "none" }}>How It Works</a>
+              <a href="/for-organizers" style={{ fontSize: 13, color: "#94a3b8", textDecoration: "none" }}>For Organizers</a>
               <button onClick={() => { setSubmitModal(true); setSubmitDone(false); setSubmitUrl(""); setSubmitEmail(""); }} style={{
                 background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)",
                 color: "#f97316", padding: "8px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
