@@ -75,6 +75,18 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatDateRange(startStr, endStr) {
+  const s = new Date(startStr);
+  const e = new Date(endStr);
+  const mo = (d) => d.toLocaleDateString("en-US", { month: "short" });
+  const yr = (d) => d.getFullYear();
+  const day = (d) => d.getDate();
+  if (mo(s) === mo(e) && yr(s) === yr(e)) {
+    return `${mo(s)} ${day(s)}-${day(e)}, ${yr(s)}`;
+  }
+  return `${mo(s)} ${day(s)} - ${mo(e)} ${day(e)}, ${yr(e)}`;
+}
+
 function formatPrice(p) {
   return p != null ? "$" + p.toLocaleString() : "TBA";
 }
@@ -211,7 +223,10 @@ function ConferenceCard({ conf, onClick }) {
             background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
             padding: "3px 8px", borderRadius: 4, marginBottom: 8,
           }}>{conf.category}</span>
-          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", margin: 0, lineHeight: 1.3 }}>{conf.name}</h3>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", margin: 0, lineHeight: 1.3 }}>
+            {conf.name}
+            <span style={{ fontSize: 13, fontWeight: 400, color: "#64748b", marginLeft: 8 }}>| {formatDateRange(conf.start, conf.end)}</span>
+          </h3>
         </div>
         <DiscountBadge code={conf.discount} pct={conf.discountPct} />
       </div>
@@ -222,10 +237,6 @@ function ConferenceCard({ conf, onClick }) {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span style={{ fontSize: 13, color: "#cbd5e1" }}>{conf.city}, {conf.country}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{formatDate(conf.start)} \u2013 {formatDate(conf.end)}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -324,7 +335,7 @@ function ConferenceDetail({ conf, onBack }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
           {[
             { icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z", label: "Location", value: `${conf.city}, ${conf.country}` },
-            { icon: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18", label: "Dates", value: `${formatDate(conf.start)} \u2013 ${formatDate(conf.end)}` },
+            { icon: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18", label: "Dates", value: formatDateRange(conf.start, conf.end) },
             { icon: "M12 6v6l4 2", label: "Duration", value: `${duration} days` },
             { icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2", label: "Attendees", value: conf.attendees ? conf.attendees.toLocaleString() : "TBA" },
           ].map((item, i) => (
@@ -458,8 +469,8 @@ function ConferenceDetail({ conf, onBack }) {
                     <div style={{ fontSize: 28, fontWeight: 800, color: "#22c55e" }}>{formatPrice(withCode)}</div>
                     <div style={{ fontSize: 11, color: "#94a3b8" }}>
                       {conf.earlyBird
-                        ? `${formatPrice(conf.earlyBird)} early bird \u2013 ${conf.discountPct}% code`
-                        : `${formatPrice(conf.price)} \u2013 ${conf.discountPct}% code`
+                        ? `${formatPrice(conf.earlyBird)} early bird – ${conf.discountPct}% code`
+                        : `${formatPrice(conf.price)} – ${conf.discountPct}% code`
                       }
                     </div>
                   </div>
@@ -498,7 +509,7 @@ function ConferenceDetail({ conf, onBack }) {
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
                     <span style={{ fontSize: 12, color: "#94a3b8" }}>{s.label}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: s.color, fontFamily: "'Space Mono', monospace" }}>
-                      {s.amount > 0 ? formatPrice(s.amount) : "\u2013" + formatPrice(Math.abs(s.amount))}
+                      {s.amount > 0 ? formatPrice(s.amount) : "–" + formatPrice(Math.abs(s.amount))}
                     </span>
                   </div>
                 ))}
