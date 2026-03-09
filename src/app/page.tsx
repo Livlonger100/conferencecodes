@@ -687,7 +687,7 @@ function ConferenceDetail({ conf, onBack }) {
                     width: "100%", marginTop: 12, padding: "10px 16px", borderRadius: 8,
                     background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.3)",
                     color: "#60a5fa", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                  }}>Book Hotel \u2192</button>
+                  }}>Book Hotel →</button>
                 </div>
               );
             })}
@@ -759,7 +759,7 @@ function ConferenceDetail({ conf, onBack }) {
           letterSpacing: 0.5,
           boxShadow: conf.discount && codeState !== "locked" ? "none" : "0 8px 30px rgba(249,115,22,0.3)",
           fontFamily: "inherit",
-        }}>Book Now \u2192</button>
+        }}>Book Now →</button>
       </div>
     </div>
   );
@@ -942,7 +942,7 @@ export default function App() {
       {/* MAIN CONTENT */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 32px 80px" }}>
         {selectedConf ? (
-          <ConferenceDetail conf={selectedConf} onBack={() => setSelectedConf(null)} />
+          <ConferenceDetail conf={selectedConf} onBack={() => { setSelectedConf(null); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
         ) : (
           <>
             {/* SEARCH & FILTERS */}
@@ -1174,7 +1174,7 @@ export default function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
               {filtered.map((conf, i) => (
                 <div key={conf.id} style={{ animation: `fadeIn ${0.15 + i * 0.05}s ease` }}>
-                  <ConferenceCard conf={conf} onClick={setSelectedConf} />
+                  <ConferenceCard conf={conf} onClick={(c) => { setSelectedConf(c); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
                 </div>
               ))}
             </div>
