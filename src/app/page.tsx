@@ -315,50 +315,40 @@ function ConferenceDetail({ conf, onBack }) {
         Back to results
       </button>
 
-      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 36, marginBottom: 24 }}>
+      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: "24px 28px 20px", marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div>
             <span style={{
               display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase",
               color: conf.category === "Longevity / Health" ? "#34d399" : "#60a5fa",
               background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
-              padding: "4px 10px", borderRadius: 5, marginBottom: 12,
+              padding: "4px 10px", borderRadius: 5, marginBottom: 10,
             }}>{conf.category}</span>
-            <h1 style={{ fontSize: 32, fontWeight: 800, color: "#f1f5f9", margin: "0 0 8px 0" }}>{conf.name}</h1>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", margin: "0 0 6px 0" }}>{conf.name}</h1>
             <p style={{ fontSize: 14, color: "#94a3b8", margin: 0 }}>by {conf.organizer}</p>
           </div>
           <VerifiedBadge confidence={conf.confidence} lastVerified={conf.lastVerified} />
         </div>
 
-        <p style={{ fontSize: 16, color: "#cbd5e1", lineHeight: 1.7, margin: "24px 0" }}>{conf.description}</p>
+        <p style={{ fontSize: 15, color: "#cbd5e1", lineHeight: 1.6, margin: "16px 0" }}>{conf.description}</p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           {[
             { icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z", label: "Location", value: `${conf.city}, ${conf.country}` },
-            { icon: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18", label: "Dates", value: formatDateRange(conf.start, conf.end) },
+            { icon: "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18", label: "Dates", value: formatDateRange(conf.start, conf.end), sub: daysAway > 0 ? `${daysAway} days away` : null },
             { icon: "M12 6v6l4 2", label: "Duration", value: `${duration} days` },
             { icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2", label: "Attendees", value: conf.attendees ? conf.attendees.toLocaleString() : "TBA" },
           ].map((item, i) => (
-            <div key={i} style={{ background: "rgba(30,41,59,0.4)", borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{item.label}</div>
-              <div style={{ fontSize: 15, color: "#e2e8f0", fontWeight: 600 }}>{item.value}</div>
+            <div key={i} style={{ background: "rgba(30,41,59,0.4)", borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{item.label}</div>
+              <div style={{ fontSize: 14, color: "#e2e8f0", fontWeight: 600 }}>{item.value}</div>
+              {item.sub && <div style={{ fontSize: 11, color: "#f97316", marginTop: 2 }}>{item.sub}</div>}
             </div>
           ))}
         </div>
-
-        {daysAway > 0 && (
-          <div style={{
-            background: "linear-gradient(135deg, rgba(249,115,22,0.1), rgba(234,88,12,0.05))",
-            border: "1px solid rgba(249,115,22,0.2)", borderRadius: 12, padding: 16, marginBottom: 24,
-            textAlign: "center",
-          }}>
-            <span style={{ fontSize: 36, fontWeight: 800, color: "#f97316" }}>{daysAway}</span>
-            <span style={{ fontSize: 14, color: "#fb923c", marginLeft: 8 }}>days until event</span>
-          </div>
-        )}
       </div>
 
-      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 28 }}>
+      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: "20px 28px" }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Pricing</h3>
 
           {/* All pricing tiers */}
