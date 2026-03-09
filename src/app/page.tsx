@@ -361,10 +361,11 @@ function ConferenceDetail({ conf, onBack }) {
             }
 
             // Determine the "current" tier: lowest active (non-sold-out) price among tiers whose deadline hasn't passed
-            const activeTiers = tiers.filter(t => !t.sold_out && t.price != null && (!t.deadline || new Date(t.deadline) >= now));
+            const visibleTiers = tiers.filter(t => !t.requires_approval);
+            const activeTiers = visibleTiers.filter(t => !t.sold_out && t.price != null && (!t.deadline || new Date(t.deadline) >= now));
             const currentPrice = activeTiers.length > 0 ? Math.min(...activeTiers.map(t => t.price)) : null;
 
-            return tiers.map((tier, i) => {
+            return visibleTiers.map((tier, i) => {
               const isActive = !tier.sold_out && tier.price != null && (!tier.deadline || new Date(tier.deadline) >= now);
               const isCurrent = isActive && tier.price === currentPrice;
               const deadlinePassed = tier.deadline && new Date(tier.deadline) < now;
