@@ -1337,8 +1337,8 @@ export default function App() {
   if (authed) return <AdminTool />;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "inherit" }}>
-      <form onSubmit={handleLogin} style={{ background: "rgba(15,23,42,0.9)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 40, width: 320, display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fa", fontFamily: "inherit" }}>
+      <form onSubmit={handleLogin} style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 40, width: 320, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: "#111827", textAlign: "center" }}>Admin</div>
         <input
           type="password"
@@ -1346,7 +1346,7 @@ export default function App() {
           value={pwInput}
           onChange={e => setPwInput(e.target.value)}
           autoFocus
-          style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: `1px solid ${pwError ? "#ef4444" : "rgba(51,65,85,0.6)"}`, color: "#111827", fontSize: 15, fontFamily: "inherit", outline: "none" }}
+          style={{ padding: "10px 14px", borderRadius: 8, background: "#f9fafb", border: `1px solid ${pwError ? "#ef4444" : "#d1d5db"}`, color: "#111827", fontSize: 15, fontFamily: "inherit", outline: "none" }}
         />
         {pwError && <div style={{ fontSize: 13, color: "#ef4444", textAlign: "center" }}>{pwError}</div>}
         <button type="submit" disabled={pwLoading || !pwInput} style={{ padding: "10px 0", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: pwLoading || !pwInput ? "not-allowed" : "pointer", opacity: pwLoading || !pwInput ? 0.6 : 1, fontFamily: "inherit" }}>
