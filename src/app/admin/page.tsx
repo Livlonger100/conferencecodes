@@ -823,7 +823,7 @@ function AdminTool() {
                 <div>
                   <label style={S.label}>Currency</label>
                   <select style={S.inputSm} value={tier.currency} onChange={e => updatePricing(i, "currency", e.target.value)}>
-                    <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option><option>CHF</option><option>AED</option>
+                    <option>AED</option><option>AUD</option><option>BRL</option><option>CAD</option><option>CHF</option><option>CNY</option><option>DKK</option><option>EUR</option><option>GBP</option><option>HKD</option><option>INR</option><option>JPY</option><option>KRW</option><option>MXN</option><option>NOK</option><option>NZD</option><option>SEK</option><option>SGD</option><option>USD</option><option>ZAR</option>
                   </select>
                 </div>
                 <div>
