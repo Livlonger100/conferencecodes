@@ -27,9 +27,9 @@ export default function HowItWorks() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f172a", fontFamily: "var(--font-geist-sans), system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "var(--font-geist-sans), system-ui, sans-serif", color: "#111827" }}>
       {/* Nav */}
-      <div style={{ borderBottom: "1px solid rgba(51,65,85,0.5)", background: "rgba(15,23,42,0.95)" }}>
+      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 64 }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 15px rgba(249,115,22,0.3)" }}>
@@ -41,7 +41,7 @@ export default function HowItWorks() {
           </a>
           <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
             <a href="/how-it-works" style={{ fontSize: 13, color: "#f97316", fontWeight: 600, textDecoration: "none" }}>How It Works</a>
-            <a href="/for-organizers" style={{ fontSize: 13, color: "#94a3b8", textDecoration: "none" }}>For Organizers</a>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>For Organizers</a>
             <a href="/" style={{ background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)", color: "#f97316", padding: "8px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Browse Conferences</a>
           </div>
         </nav>
@@ -49,26 +49,27 @@ export default function HowItWorks() {
 
       {/* Hero */}
       <div style={{ textAlign: "center", padding: "72px 32px 56px", maxWidth: 700, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 44, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.15, margin: "0 0 16px" }}>
+        <h1 style={{ fontSize: 44, fontWeight: 800, color: "#111827", lineHeight: 1.15, margin: "0 0 16px" }}>
           Save on every conference<br />
           <span style={{ color: "#f97316" }}>you attend</span>
         </h1>
-        <p style={{ fontSize: 17, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>
+        <p style={{ fontSize: 17, color: "#6b7280", lineHeight: 1.7, margin: 0 }}>
           ConferenceCodes gives attendees access to exclusive discount codes for verified conferences. It takes 30 seconds.
         </p>
       </div>
 
       {/* Steps */}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 32px 80px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 32px 80px", display: "flex", flexDirection: "column", gap: 20 }}>
         {steps.map((step, i) => (
           <div key={i} style={{
-            background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)",
+            background: "#ffffff", border: "1px solid #e5e7eb",
             borderRadius: 20, padding: "36px 40px", display: "flex", gap: 32, alignItems: "flex-start",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
           }}>
             <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
               <div style={{
                 width: 56, height: 56, borderRadius: "50%",
-                background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.25)",
+                background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {step.icon}
@@ -76,8 +77,8 @@ export default function HowItWorks() {
               <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: 1 }}>STEP {step.n}</div>
             </div>
             <div style={{ paddingTop: 4 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: "0 0 10px" }}>{step.title}</h2>
-              <p style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>{step.body}</p>
+              <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 10px" }}>{step.title}</h2>
+              <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.7, margin: 0 }}>{step.body}</p>
             </div>
           </div>
         ))}
@@ -85,15 +86,29 @@ export default function HowItWorks() {
 
       {/* CTA */}
       <div style={{ textAlign: "center", padding: "0 32px 96px" }}>
-        <div style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.08), rgba(234,88,12,0.04))", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 24, padding: "48px 40px", maxWidth: 560, margin: "0 auto" }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", margin: "0 0 12px" }}>Ready to save?</h2>
-          <p style={{ fontSize: 15, color: "#94a3b8", margin: "0 0 28px", lineHeight: 1.6 }}>Browse our verified conference directory and get your first discount code in under a minute.</p>
+        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 24, padding: "48px 40px", maxWidth: 560, margin: "0 auto", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Ready to save?</h2>
+          <p style={{ fontSize: 15, color: "#6b7280", margin: "0 0 28px", lineHeight: 1.6 }}>Browse our verified conference directory and get your first discount code in under a minute.</p>
           <a href="/" style={{
             display: "inline-block", padding: "14px 36px", borderRadius: 10,
             background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff",
             fontSize: 16, fontWeight: 700, textDecoration: "none",
             boxShadow: "0 4px 20px rgba(249,115,22,0.3)",
           }}>Browse Conferences</a>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: "1px solid #e5e7eb", padding: "32px", background: "#f3f4f6" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 16, fontWeight: 800 }}>
+            <span style={{ color: "#111827" }}>Conference</span><span style={{ color: "#f97316" }}>Codes</span>
+          </span>
+          <div style={{ display: "flex", gap: 24 }}>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>Privacy</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>Terms</span>
+            <a href="/for-organizers" style={{ fontSize: 12, color: "#9ca3af", textDecoration: "none" }}>For Organizers</a>
+          </div>
         </div>
       </div>
     </div>

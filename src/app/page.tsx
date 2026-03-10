@@ -1054,22 +1054,22 @@ export default function App() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {category !== "All" && (
                       <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        {category} <button onClick={() => setCategory("All")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>\u00d7</button>
+                        {category} <button onClick={() => setCategory("All")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                       </span>
                     )}
                     {locationQuery && (
                       <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        {locationQuery} <button onClick={() => setLocationQuery("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>\u00d7</button>
+                        {locationQuery} <button onClick={() => setLocationQuery("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                       </span>
                     )}
                     {dateFrom && (
                       <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        From {dateFrom} <button onClick={() => setDateFrom("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>\u00d7</button>
+                        From {dateFrom} <button onClick={() => setDateFrom("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                       </span>
                     )}
                     {dateTo && (
                       <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        To {dateTo} <button onClick={() => setDateTo("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>\u00d7</button>
+                        To {dateTo} <button onClick={() => setDateTo("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                       </span>
                     )}
                   </div>
