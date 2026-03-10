@@ -146,7 +146,7 @@ function VerifiedBadge({ confidence, lastVerified }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <div style={{ width: 8, height: 8, borderRadius: "50%", background: confidence > 0.9 ? "#22c55e" : confidence > 0.8 ? "#f59e0b" : "#ef4444" }} />
-      <span style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 0.3 }}>Verified {lastVerified}</span>
+      <span style={{ fontSize: 11, color: "#9ca3af", letterSpacing: 0.3 }}>Verified {lastVerified}</span>
     </div>
   );
 }
@@ -170,7 +170,7 @@ function DynamicPricingBadge({ conf }) {
     // Fallback for old model
     if (conf.earlyBirdDeadline) {
       const days = daysUntil(conf.earlyBirdDeadline);
-      if (days < 0) return <span style={{ fontSize: 11, color: "#94a3b8" }}>Early bird expired</span>;
+      if (days < 0) return <span style={{ fontSize: 11, color: "#9ca3af" }}>Early bird expired</span>;
       return (
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={days < 30 ? "#ef4444" : "#f59e0b"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -205,12 +205,12 @@ function ConferenceCard({ conf, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? "rgba(30,41,59,0.95)" : "rgba(15,23,42,0.8)",
-        border: `1px solid ${hovered ? "rgba(249,115,22,0.4)" : "rgba(51,65,85,0.5)"}`,
+        background: hovered ? "#fafafa" : "#ffffff",
+        border: `1px solid ${hovered ? "rgba(249,115,22,0.4)" : "#e5e7eb"}`,
         borderRadius: 16, padding: 24, cursor: "pointer",
         transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
-        transform: hovered ? "translateY(-4px)" : "translateY(0)",
-        boxShadow: hovered ? "0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(249,115,22,0.08)" : "0 4px 20px rgba(0,0,0,0.3)",
+        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        boxShadow: hovered ? "0 12px 40px rgba(0,0,0,0.1), 0 0 20px rgba(249,115,22,0.06)" : "0 1px 4px rgba(0,0,0,0.06)",
         position: "relative", overflow: "hidden",
       }}
     >
@@ -223,32 +223,32 @@ function ConferenceCard({ conf, onClick }) {
             background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
             padding: "3px 8px", borderRadius: 4, marginBottom: 8,
           }}>{conf.category}</span>
-          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", margin: 0, lineHeight: 1.3 }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>
             {conf.name}
-            <span style={{ fontSize: 13, fontWeight: 400, color: "#64748b", marginLeft: 8 }}>| {formatDateRange(conf.start, conf.end)}</span>
+            <span style={{ fontSize: 13, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>| {formatDateRange(conf.start, conf.end)}</span>
           </h3>
         </div>
         <DiscountBadge code={conf.discount} pct={conf.discountPct} />
       </div>
 
-      <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 16px 0", lineHeight: 1.5 }}>{conf.description}</p>
+      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px 0", lineHeight: 1.5 }}>{conf.description}</p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{conf.city}, {conf.country}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span style={{ fontSize: 13, color: "#374151" }}>{conf.city}, {conf.country}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{duration} days</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style={{ fontSize: 13, color: "#374151" }}>{duration} days</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{conf.attendees ? conf.attendees.toLocaleString() : "TBA"} attendees</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span style={{ fontSize: 13, color: "#374151" }}>{conf.attendees ? conf.attendees.toLocaleString() : "TBA"} attendees</span>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: "1px solid rgba(51,65,85,0.4)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: "1px solid #e5e7eb" }}>
         <div>
           {(() => {
             const p = getCurrentPricing(conf);
@@ -256,7 +256,7 @@ function ConferenceCard({ conf, onClick }) {
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                 <span style={{ fontSize: 22, fontWeight: 800, color: "#f97316" }}>{formatPrice(p.currentPrice)}</span>
                 {p.currentPrice < p.standardPrice && (
-                  <span style={{ fontSize: 14, fontWeight: 400, color: "#94a3b8", textDecoration: "line-through" }}>{formatPrice(p.standardPrice)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 400, color: "#9ca3af", textDecoration: "line-through" }}>{formatPrice(p.standardPrice)}</span>
                 )}
               </div>
             );
@@ -276,7 +276,7 @@ function ConferenceCard({ conf, onClick }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
           <VerifiedBadge confidence={conf.confidence} lastVerified={conf.lastVerified} />
           <span style={{
-            fontSize: 11, color: "#94a3b8", background: "rgba(51,65,85,0.3)", padding: "2px 8px", borderRadius: 4,
+            fontSize: 11, color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: 4,
           }}>{conf.format}</span>
         </div>
       </div>
@@ -308,14 +308,14 @@ function ConferenceDetail({ conf, onBack }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <button onClick={onBack} style={{
-        background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14,
-        display: "flex", alignItems: "center", gap: 6, padding: 0, marginBottom: 24,
+        background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14,
+        display: "flex", alignItems: "center", gap: 6, padding: 0, marginBottom: 24, fontFamily: "inherit",
       }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Back to results
       </button>
 
-      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: "24px 28px 20px", marginBottom: 12 }}>
+      <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: "24px 28px 20px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div>
             <span style={{
@@ -324,13 +324,13 @@ function ConferenceDetail({ conf, onBack }) {
               background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
               padding: "4px 10px", borderRadius: 5, marginBottom: 10,
             }}>{conf.category}</span>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", margin: "0 0 6px 0" }}>{conf.name}</h1>
-            <p style={{ fontSize: 14, color: "#94a3b8", margin: 0 }}>by {conf.organizer}</p>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>{conf.name}</h1>
+            <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>by {conf.organizer}</p>
           </div>
           <VerifiedBadge confidence={conf.confidence} lastVerified={conf.lastVerified} />
         </div>
 
-        <p style={{ fontSize: 15, color: "#cbd5e1", lineHeight: 1.6, margin: "16px 0" }}>{conf.description}</p>
+        <p style={{ fontSize: 15, color: "#374151", lineHeight: 1.6, margin: "16px 0" }}>{conf.description}</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           {[
@@ -339,17 +339,17 @@ function ConferenceDetail({ conf, onBack }) {
             { icon: "M12 6v6l4 2", label: "Duration", value: `${duration} days` },
             { icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2", label: "Attendees", value: conf.attendees ? conf.attendees.toLocaleString() : "TBA" },
           ].map((item, i) => (
-            <div key={i} style={{ background: "rgba(30,41,59,0.4)", borderRadius: 10, padding: 12 }}>
-              <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: 14, color: "#e2e8f0", fontWeight: 600 }}>{item.value}</div>
+            <div key={i} style={{ background: "#f9fafb", borderRadius: 10, padding: 12, border: "1px solid #f3f4f6" }}>
+              <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{item.label}</div>
+              <div style={{ fontSize: 14, color: "#111827", fontWeight: 600 }}>{item.value}</div>
               {item.sub && <div style={{ fontSize: 11, color: "#f97316", marginTop: 2 }}>{item.sub}</div>}
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: "20px 28px" }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Pricing</h3>
+      <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: "20px 28px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Pricing</h3>
 
           {/* All pricing tiers */}
           {(() => {
@@ -357,7 +357,7 @@ function ConferenceDetail({ conf, onBack }) {
             const now = new Date();
 
             if (tiers.length === 0) {
-              return <div style={{ fontSize: 14, color: "#64748b" }}>Pricing not available</div>;
+              return <div style={{ fontSize: 14, color: "#9ca3af" }}>Pricing not available</div>;
             }
 
             // Determine the "current" tier: lowest active (non-sold-out) price among tiers whose deadline hasn't passed
@@ -374,20 +374,20 @@ function ConferenceDetail({ conf, onBack }) {
 
               return (
                 <div key={i} style={{
-                  background: isCurrent ? "rgba(249,115,22,0.08)" : "rgba(30,41,59,0.4)",
-                  border: `1px solid ${isCurrent ? "rgba(249,115,22,0.25)" : "rgba(51,65,85,0.4)"}`,
+                  background: isCurrent ? "rgba(249,115,22,0.06)" : "#f9fafb",
+                  border: `1px solid ${isCurrent ? "rgba(249,115,22,0.25)" : "#e5e7eb"}`,
                   borderRadius: 12, padding: "14px 16px", marginBottom: 8,
                   opacity: (tier.sold_out || deadlinePassed) ? 0.5 : 1,
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: isCurrent ? "#fb923c" : "#94a3b8", marginBottom: tier.deadline || tier.priceAfterDeadline ? 4 : 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: isCurrent ? "#f97316" : "#374151", marginBottom: tier.deadline || tier.priceAfterDeadline ? 4 : 0 }}>
                         {tier.label}
                         {tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#ef4444", fontWeight: 700 }}>SOLD OUT</span>}
-                        {tier.requires_approval && !tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#94a3b8" }}>requires approval</span>}
+                        {tier.requires_approval && !tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#9ca3af" }}>requires approval</span>}
                       </div>
                       {tier.deadline && (
-                        <div style={{ fontSize: 11, color: deadlinePassed ? "#64748b" : urgent ? "#ef4444" : "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
+                        <div style={{ fontSize: 11, color: deadlinePassed ? "#9ca3af" : urgent ? "#ef4444" : "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                           {deadlinePassed ? `Deadline passed (${formatDate(tier.deadline)})` : `Deadline: ${formatDate(tier.deadline)} — ${daysLeft}d left`}
                         </div>
@@ -399,11 +399,11 @@ function ConferenceDetail({ conf, onBack }) {
                       )}
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: isCurrent ? "#f97316" : tier.sold_out || deadlinePassed ? "#475569" : "#e2e8f0" }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: isCurrent ? "#f97316" : tier.sold_out || deadlinePassed ? "#9ca3af" : "#111827" }}>
                         {formatPrice(tier.price)}
                       </div>
                       {tier.priceAfterDeadline && !deadlinePassed && (
-                        <div style={{ fontSize: 12, color: "#64748b", textDecoration: "line-through" }}>{formatPrice(tier.priceAfterDeadline)}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", textDecoration: "line-through" }}>{formatPrice(tier.priceAfterDeadline)}</div>
                       )}
                     </div>
                   </div>
@@ -430,7 +430,7 @@ function ConferenceDetail({ conf, onBack }) {
                       {conf.earlyBird ? "EARLY BIRD + CC CODE" : "WITH CC CODE"}
                     </div>
                     <div style={{ fontSize: 28, fontWeight: 800, color: "#22c55e" }}>{formatPrice(withCode)}</div>
-                    <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>
                       {conf.earlyBird
                         ? `${formatPrice(conf.earlyBird)} early bird – ${conf.discountPct}% code`
                         : `${formatPrice(conf.price)} – ${conf.discountPct}% code`
@@ -466,18 +466,18 @@ function ConferenceDetail({ conf, onBack }) {
               ? Math.round((conf.earlyBird || conf.price) * (1 - conf.discountPct / 100))
               : conf.earlyBird || conf.price;
             return (
-              <div style={{ background: "rgba(30,41,59,0.3)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.5, marginBottom: 10, textTransform: "uppercase" }}>Savings Breakdown</div>
+              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, letterSpacing: 0.5, marginBottom: 10, textTransform: "uppercase" }}>Savings Breakdown</div>
                 {steps.map((s, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
-                    <span style={{ fontSize: 12, color: "#94a3b8" }}>{s.label}</span>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: s.color, fontFamily: "'Space Mono', monospace" }}>
                       {s.amount > 0 ? formatPrice(s.amount) : "–" + formatPrice(Math.abs(s.amount))}
                     </span>
                   </div>
                 ))}
-                <div style={{ borderTop: "1px solid rgba(51,65,85,0.4)", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, color: "#f1f5f9", fontWeight: 700 }}>You pay</span>
+                <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, color: "#111827", fontWeight: 700 }}>You pay</span>
                   <span style={{ fontSize: 16, fontWeight: 800, color: "#22c55e", fontFamily: "'Space Mono', monospace" }}>{formatPrice(finalPrice)}</span>
                 </div>
               </div>
@@ -491,7 +491,7 @@ function ConferenceDetail({ conf, onBack }) {
                   border: "1px solid rgba(249,115,22,0.25)", borderRadius: 12, padding: 20, textAlign: "center",
                 }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316", marginBottom: 4 }}>{conf.discountPct}% OFF</div>
-                  <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 14 }}>Exclusive discount available for this conference</div>
+                  <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 14 }}>Exclusive discount available for this conference</div>
                   <div style={{ fontSize: 12, color: "#fb923c", marginBottom: 14 }}>
                     {conf.earlyBird ? (
                       <span>Pay <span style={{ fontWeight: 800, fontSize: 16 }}>{formatPrice(Math.round(conf.earlyBird * (1 - conf.discountPct / 100)))}</span> instead of {formatPrice(conf.earlyBird)}</span>
@@ -509,7 +509,7 @@ function ConferenceDetail({ conf, onBack }) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
                     Get Your Code — Free
                   </button>
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>Limited codes available</div>
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>Limited codes available</div>
                 </div>
               )}
 
@@ -519,16 +519,16 @@ function ConferenceDetail({ conf, onBack }) {
                   border: "1px solid rgba(249,115,22,0.25)", borderRadius: 12, padding: 20,
                   animation: "fadeIn 0.3s ease",
                 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>Enter your email to unlock your code</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 16 }}>Your code will also be emailed to you for safekeeping.</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Enter your email to unlock your code</div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>Your code will also be emailed to you for safekeeping.</div>
                   <input
                     type="email" placeholder="you@email.com" value={email}
                     onChange={e => setEmail(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && handleSubmitEmail()}
                     style={{
                       width: "100%", padding: "12px 14px", borderRadius: 8, marginBottom: 12,
-                      background: "rgba(15,23,42,0.6)", border: "1px solid rgba(249,115,22,0.2)",
-                      color: "#e2e8f0", fontSize: 14, fontFamily: "inherit", outline: "none",
+                      background: "#f9fafb", border: "1px solid #d1d5db",
+                      color: "#111827", fontSize: 14, fontFamily: "inherit", outline: "none",
                     }}
                   />
                   <button onClick={handleSubmitEmail} style={{
@@ -537,7 +537,7 @@ function ConferenceDetail({ conf, onBack }) {
                     color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                     opacity: email.includes("@") ? 1 : 0.5,
                   }}>Unlock My Code</button>
-                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 8, textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 8, textAlign: "center" }}>
                     We\u2019ll never spam you. One email with your code, that\u2019s it.
                   </div>
                 </div>
@@ -570,22 +570,22 @@ function ConferenceDetail({ conf, onBack }) {
         </div>
 
       {(conf.speakers?.length > 0 || conf.tags?.length > 0) && (
-        <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 24, marginTop: 24 }}>
+        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 24, marginTop: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           {conf.speakers?.length > 0 && (
             <>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Speakers</h3>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Speakers</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: conf.tags?.length > 0 ? 20 : 0 }}>
                 {conf.speakers.map((s, i) => (
                   <span key={i} style={{
                     display: "flex", alignItems: "center", gap: 6,
-                    background: "rgba(51,65,85,0.5)", border: "1px solid rgba(71,85,105,0.4)",
+                    background: "#f3f4f6", border: "1px solid #e5e7eb",
                     borderRadius: 20, padding: "5px 12px 5px 6px",
                   }}>
                     <span style={{
                       width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                      background: `hsl(${i * 60 + 200}, 40%, 30%)`, fontSize: 11, fontWeight: 700, color: "#e2e8f0", flexShrink: 0,
+                      background: `hsl(${i * 60 + 200}, 50%, 50%)`, fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
                     }}>{s.charAt(0)}</span>
-                    <span style={{ fontSize: 13, color: "#cbd5e1", fontWeight: 500 }}>{s}</span>
+                    <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{s}</span>
                   </span>
                 ))}
               </div>
@@ -593,11 +593,11 @@ function ConferenceDetail({ conf, onBack }) {
           )}
           {conf.tags?.length > 0 && (
             <>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Topics</h3>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Topics</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {conf.tags.map((t, i) => (
                   <span key={i} style={{
-                    fontSize: 12, color: "#94a3b8", background: "rgba(51,65,85,0.4)", borderRadius: 6, padding: "5px 12px",
+                    fontSize: 12, color: "#6b7280", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 12px",
                   }}>{t}</span>
                 ))}
               </div>
@@ -608,15 +608,15 @@ function ConferenceDetail({ conf, onBack }) {
 
       {/* HOTEL SECTION */}
       {conf.hotels && conf.hotels.length > 0 && (
-        <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(51,65,85,0.5)", borderRadius: 20, padding: 28, marginTop: 24 }}>
+        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 28, marginTop: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: 0, letterSpacing: 0.5, textTransform: "uppercase" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, letterSpacing: 0.5, textTransform: "uppercase" }}>
               <span style={{ marginRight: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" style={{ verticalAlign: "middle" }}><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v.01M12 14v.01M16 14v.01M8 18v.01M12 18v.01M16 18v.01"/></svg>
               </span>
               Official Hotel Partners
             </h3>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>Negotiated conference rates</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>Negotiated conference rates</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: conf.hotels.length > 1 ? "1fr 1fr" : "1fr", gap: 16 }}>
             {conf.hotels.map((hotel, i) => {
@@ -625,19 +625,19 @@ function ConferenceDetail({ conf, onBack }) {
               const hotelBookDays = daysUntil(hotel.bookBy);
               return (
                 <div key={i} style={{
-                  background: "rgba(30,41,59,0.4)", borderRadius: 14, padding: 20,
-                  border: "1px solid rgba(96,165,250,0.15)",
+                  background: "#f9fafb", borderRadius: 14, padding: 20,
+                  border: "1px solid rgba(96,165,250,0.2)",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>{hotel.name}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{hotel.name}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <div style={{ display: "flex", gap: 2 }}>
                           {Array.from({ length: hotel.stars }).map((_, s) => (
                             <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                           ))}
                         </div>
-                        <span style={{ fontSize: 11, color: "#94a3b8" }}>{hotel.distance}</span>
+                        <span style={{ fontSize: 11, color: "#9ca3af" }}>{hotel.distance}</span>
                       </div>
                     </div>
                     <div style={{
@@ -651,18 +651,18 @@ function ConferenceDetail({ conf, onBack }) {
 
                   <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, marginBottom: 2 }}>CONF RATE</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: "#60a5fa" }}>{formatPrice(hotel.confRate)}<span style={{ fontSize: 12, fontWeight: 400, color: "#94a3b8" }}>/night</span></div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginBottom: 2 }}>CONF RATE</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "#60a5fa" }}>{formatPrice(hotel.confRate)}<span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>/night</span></div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, marginBottom: 2 }}>RACK RATE</div>
-                      <div style={{ fontSize: 16, color: "#94a3b8", textDecoration: "line-through", marginTop: 4 }}>{formatPrice(hotel.rackRate)}/night</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginBottom: 2 }}>RACK RATE</div>
+                      <div style={{ fontSize: 16, color: "#9ca3af", textDecoration: "line-through", marginTop: 4 }}>{formatPrice(hotel.rackRate)}/night</div>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
                     {nights} nights = <span style={{ color: "#60a5fa", fontWeight: 700 }}>{formatPrice(hotel.confRate * nights)} total</span>
-                    <span style={{ color: "#94a3b8" }}> (vs {formatPrice(hotel.rackRate * nights)} rack)</span>
+                    <span style={{ color: "#9ca3af" }}> (vs {formatPrice(hotel.rackRate * nights)} rack)</span>
                   </div>
 
                   {hotelBookDays > 0 ? (
@@ -698,25 +698,25 @@ function ConferenceDetail({ conf, onBack }) {
         const totalSavings = totalWithoutSavings - totalTrip;
         return (
           <div style={{
-            background: "linear-gradient(135deg, rgba(96,165,250,0.08), rgba(249,115,22,0.08))",
-            border: "1px solid rgba(96,165,250,0.2)", borderRadius: 20, padding: 28, marginTop: 24,
+            background: "#ffffff",
+            border: "1px solid #e5e7eb", borderRadius: 20, padding: 28, marginTop: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
           }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>
               Estimated Trip Cost
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto 1fr", gap: 16, alignItems: "center" }}>
-              <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 12, padding: 16, textAlign: "center" }}>
-                <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>TICKET{conf.discount ? " (w/ code)" : ""}</div>
+              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>TICKET{conf.discount ? " (w/ code)" : ""}</div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316" }}>{formatPrice(ticketWithDiscount)}</div>
-                {conf.discount && <div style={{ fontSize: 11, color: "#94a3b8", textDecoration: "line-through" }}>{formatPrice(conf.earlyBird || conf.price)}</div>}
+                {conf.discount && <div style={{ fontSize: 11, color: "#9ca3af", textDecoration: "line-through" }}>{formatPrice(conf.earlyBird || conf.price)}</div>}
               </div>
-              <div style={{ textAlign: "center", fontSize: 24, color: "#94a3b8", fontWeight: 300 }}>+</div>
-              <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 12, padding: 16, textAlign: "center" }}>
-                <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>HOTEL ({nights} nights)</div>
+              <div style={{ textAlign: "center", fontSize: 24, color: "#9ca3af", fontWeight: 300 }}>+</div>
+              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>HOTEL ({nights} nights)</div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: "#60a5fa" }}>{formatPrice(hotelTotal)}</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>{cheapestHotel.name}</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>{cheapestHotel.name}</div>
               </div>
-              <div style={{ textAlign: "center", fontSize: 24, color: "#94a3b8", fontWeight: 300 }}>=</div>
+              <div style={{ textAlign: "center", fontSize: 24, color: "#9ca3af", fontWeight: 300 }}>=</div>
               <div style={{
                 background: "linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05))",
                 border: "1px solid rgba(34,197,94,0.2)", borderRadius: 12, padding: 16, textAlign: "center",
@@ -849,9 +849,9 @@ export default function App() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#0a0f1a",
+      minHeight: "100vh", background: "#f8f9fa",
       fontFamily: "'DM Sans', -apple-system, sans-serif",
-      color: "#e2e8f0",
+      color: "#111827",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Space+Mono:wght@400;700&display=swap');
@@ -861,72 +861,58 @@ export default function App() {
         @keyframes scanLine { 0% { transform: translateY(-100%); } 100% { transform: translateY(400%); } }
         * { box-sizing: border-box; }
         input:focus, select:focus { outline: none; border-color: rgba(249,115,22,0.5) !important; }
+        input::placeholder { color: #9ca3af; }
         select { appearance: none; -webkit-appearance: none; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.5); border-radius: 3px; }
       `}</style>
 
       {loading && (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: "#f97316", marginBottom: 8 }}>ConferenceCodes</div>
-            <div style={{ color: "#94a3b8" }}>Loading conferences...</div>
+            <div style={{ color: "#6b7280" }}>Loading conferences...</div>
           </div>
         </div>
       )}
 
       {!loading && <>
-      {/* HERO / HEADER */}
-      <div style={{
-        position: "relative", overflow: "hidden",
-        background: "linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(11,17,32,1) 100%)",
-        borderBottom: "1px solid rgba(51,65,85,0.5)",
-      }}>
-        {/* Subtle grid background */}
-        <div style={{
-          position: "absolute", inset: 0, opacity: 0.03,
-          backgroundImage: "linear-gradient(rgba(249,115,22,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(249,115,22,0.5) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }} />
-        {/* Gradient orbs */}
-        <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", bottom: -50, left: -50, width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(96,165,250,0.04) 0%, transparent 70%)" }} />
-
-        <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "0 32px" }}>
-          {/* Nav */}
-          <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 0" }}>
-            <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 4px 15px rgba(249,115,22,0.3)",
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              </div>
-              <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>
-                <span style={{ color: "#f1f5f9" }}>Conference</span>
-                <span style={{ color: "#f97316" }}>Codes</span>
-              </span>
-            </a>
-            <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-              <a href="/how-it-works" style={{ fontSize: 13, color: "#94a3b8", textDecoration: "none" }}>How It Works</a>
-              <a href="/for-organizers" style={{ fontSize: 13, color: "#94a3b8", textDecoration: "none" }}>For Organizers</a>
-              <button onClick={() => { setSubmitModal(true); setSubmitDone(false); setSubmitUrl(""); setSubmitEmail(""); }} style={{
-                background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)",
-                color: "#f97316", padding: "8px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              }}>Submit a Conference</button>
+      {/* DARK NAV */}
+      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 64 }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 4px 15px rgba(249,115,22,0.3)",
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-          </nav>
-
-          {/* Hero content */}
-          <div style={{ textAlign: "center", padding: "24px 0 20px" }}>
-            <h1 style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.2, margin: "0 0 0", color: "#f1f5f9" }}>
-              Verified conferences. Exclusive codes.{" "}
-              <span style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8", whiteSpace: "nowrap" }}>({CONFERENCES.length} verified)</span>
-            </h1>
+            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>
+              <span style={{ color: "#f1f5f9" }}>Conference</span>
+              <span style={{ color: "#f97316" }}>Codes</span>
+            </span>
+          </a>
+          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>How It Works</a>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>For Organizers</a>
+            <button onClick={() => { setSubmitModal(true); setSubmitDone(false); setSubmitUrl(""); setSubmitEmail(""); }} style={{
+              background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)",
+              color: "#f97316", padding: "8px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+            }}>Submit a Conference</button>
           </div>
+        </nav>
+      </div>
+
+      {/* LIGHT HERO */}
+      <div style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", padding: "20px 32px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
+          <h1 style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.2, margin: 0, color: "#111827" }}>
+            Verified conferences. Exclusive codes.{" "}
+            <span style={{ fontSize: 16, fontWeight: 600, color: "#6b7280", whiteSpace: "nowrap" }}>({CONFERENCES.length} verified)</span>
+          </h1>
         </div>
       </div>
 
@@ -938,9 +924,9 @@ export default function App() {
           <>
             {/* SEARCH & FILTERS */}
             <div style={{
-              background: "#0f172a", border: "1px solid rgba(100,116,139,0.4)",
+              background: "#ffffff", border: "1px solid #e5e7eb",
               borderRadius: 16, padding: "16px 20px", marginBottom: 24,
-              boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
             }}>
               {/* Search bar */}
               <div style={{ position: "relative", marginBottom: 12 }}>
@@ -951,8 +937,8 @@ export default function App() {
                   onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                   style={{
                     width: "100%", padding: "12px 110px 12px 48px", borderRadius: 10,
-                    background: "rgba(30,41,59,0.6)", border: "1px solid rgba(100,116,139,0.5)",
-                    color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", outline: "none",
+                    background: "#f9fafb", border: "1px solid #d1d5db",
+                    color: "#111827", fontSize: 15, fontFamily: "inherit", outline: "none",
                   }}
                 />
                 <button
@@ -968,12 +954,12 @@ export default function App() {
               {/* Single filter row: Category | Location | Format | From | To */}
               <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
                 <div style={{ flex: "1 1 140px", minWidth: 120 }}>
-                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Category</div>
+                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Category</div>
                   <select value={category} onChange={e => setCategory(e.target.value)} style={{
                     width: "100%", padding: "8px 12px", borderRadius: 8,
-                    background: category !== "All" ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                    border: category !== "All" ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
-                    color: category !== "All" ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                    background: category !== "All" ? "rgba(249,115,22,0.08)" : "#f9fafb",
+                    border: category !== "All" ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
+                    color: category !== "All" ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
                     appearance: "none", WebkitAppearance: "none", outline: "none",
                   }}>
                     {CATEGORIES.map(o => <option key={o} value={o}>{o}</option>)}
@@ -981,7 +967,7 @@ export default function App() {
                 </div>
 
                 <div style={{ flex: "2 1 180px", minWidth: 140 }}>
-                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Location</div>
+                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Location</div>
                   <div style={{ position: "relative" }}>
                     <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                     <input
@@ -989,9 +975,9 @@ export default function App() {
                       value={locationQuery} onChange={e => setLocationQuery(e.target.value)}
                       style={{
                         width: "100%", padding: "8px 28px 8px 28px", borderRadius: 8,
-                        background: locationQuery ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                        border: locationQuery ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
-                        color: locationQuery ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", outline: "none",
+                        background: locationQuery ? "rgba(249,115,22,0.08)" : "#f9fafb",
+                        border: locationQuery ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
+                        color: locationQuery ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", outline: "none",
                       }}
                     />
                     {locationQuery && (
@@ -1004,12 +990,12 @@ export default function App() {
                 </div>
 
                 <div style={{ flex: "1 1 120px", minWidth: 110 }}>
-                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Format</div>
+                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Format</div>
                   <select value={format} onChange={e => setFormat(e.target.value)} style={{
                     width: "100%", padding: "8px 12px", borderRadius: 8,
-                    background: format !== "All Formats" ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                    border: format !== "All Formats" ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
-                    color: format !== "All Formats" ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                    background: format !== "All Formats" ? "rgba(249,115,22,0.08)" : "#f9fafb",
+                    border: format !== "All Formats" ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
+                    color: format !== "All Formats" ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
                     appearance: "none", WebkitAppearance: "none", outline: "none",
                   }}>
                     {FORMATS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -1017,29 +1003,29 @@ export default function App() {
                 </div>
 
                 <div style={{ flex: "1 1 130px", minWidth: 120 }}>
-                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>From</div>
+                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>From</div>
                   <input
                     type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                     style={{
                       width: "100%", padding: "8px 10px", borderRadius: 8,
-                      background: dateFrom ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                      border: dateFrom ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
-                      color: dateFrom ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      colorScheme: "dark",
+                      background: dateFrom ? "rgba(249,115,22,0.08)" : "#f9fafb",
+                      border: dateFrom ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
+                      color: dateFrom ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", outline: "none",
+                      colorScheme: "light",
                     }}
                   />
                 </div>
 
                 <div style={{ flex: "1 1 130px", minWidth: 120 }}>
-                  <div style={{ fontSize: 10, color: "#e2e8f0", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>To</div>
+                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>To</div>
                   <input
                     type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                     style={{
                       width: "100%", padding: "8px 10px", borderRadius: 8,
-                      background: dateTo ? "rgba(249,115,22,0.1)" : "rgba(30,41,59,0.6)",
-                      border: dateTo ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(100,116,139,0.5)",
-                      color: dateTo ? "#f97316" : "#cbd5e1", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      colorScheme: "dark",
+                      background: dateTo ? "rgba(249,115,22,0.08)" : "#f9fafb",
+                      border: dateTo ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
+                      color: dateTo ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", outline: "none",
+                      colorScheme: "light",
                     }}
                   />
                 </div>
@@ -1055,8 +1041,8 @@ export default function App() {
                   ].map((p, i) => (
                     <button key={i} onClick={p.fn} style={{
                       padding: "5px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                      background: "rgba(30,41,59,0.4)", border: "1px solid rgba(100,116,139,0.4)",
-                      color: "#94a3b8", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                      background: "#f3f4f6", border: "1px solid #e5e7eb",
+                      color: "#6b7280", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
                     }}>{p.label}</button>
                   ))}
                 </div>
@@ -1064,7 +1050,7 @@ export default function App() {
 
               {/* Active filters + clear */}
               {activeFilterCount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(51,65,85,0.3)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid #e5e7eb" }}>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {category !== "All" && (
                       <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1088,7 +1074,7 @@ export default function App() {
                     )}
                   </div>
                   <button onClick={clearFilters} style={{
-                    background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12, fontFamily: "inherit",
+                    background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 12, fontFamily: "inherit",
                     textDecoration: "underline",
                   }}>Clear all filters</button>
                 </div>
@@ -1098,15 +1084,15 @@ export default function App() {
             {/* Results header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>
-                <span style={{ fontSize: 14, color: "#94a3b8" }}>
-                  Showing <span style={{ color: "#f1f5f9", fontWeight: 700 }}>{filtered.length}</span> verified conferences
+                <span style={{ fontSize: 14, color: "#6b7280" }}>
+                  Showing <span style={{ color: "#111827", fontWeight: 700 }}>{filtered.length}</span> verified conferences
                 </span>
               </div>
               <button onClick={() => setShowDeepSearch(!showDeepSearch)} style={{
                 display: "flex", alignItems: "center", gap: 8,
-                background: showDeepSearch ? "rgba(249,115,22,0.15)" : "rgba(30,41,59,0.4)",
-                border: `1px solid ${showDeepSearch ? "rgba(249,115,22,0.3)" : "rgba(51,65,85,0.5)"}`,
-                color: showDeepSearch ? "#f97316" : "#94a3b8", padding: "8px 16px", borderRadius: 10,
+                background: showDeepSearch ? "rgba(249,115,22,0.08)" : "#f3f4f6",
+                border: `1px solid ${showDeepSearch ? "rgba(249,115,22,0.3)" : "#e5e7eb"}`,
+                color: showDeepSearch ? "#f97316" : "#6b7280", padding: "8px 16px", borderRadius: 10,
                 fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 8v4l2 2"/></svg>
@@ -1124,7 +1110,7 @@ export default function App() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 8v4l2 2"/></svg>
                   <span style={{ fontSize: 14, fontWeight: 700, color: "#f97316" }}>AI Deep Search</span>
-                  <span style={{ fontSize: 12, color: "#94a3b8" }}>\u2014 Find niche conferences not yet in our database</span>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>\u2014 Find niche conferences not yet in our database</span>
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
                   <input
@@ -1133,8 +1119,8 @@ export default function App() {
                     onKeyDown={e => e.key === "Enter" && handleDeepSearch()}
                     style={{
                       flex: 1, padding: "12px 16px", borderRadius: 10,
-                      background: "rgba(15,23,42,0.6)", border: "1px solid rgba(249,115,22,0.2)",
-                      color: "#e2e8f0", fontSize: 14, fontFamily: "inherit",
+                      background: "#ffffff", border: "1px solid #d1d5db",
+                      color: "#111827", fontSize: 14, fontFamily: "inherit",
                     }}
                   />
                   <button onClick={handleDeepSearch} disabled={deepSearching} style={{
@@ -1147,12 +1133,12 @@ export default function App() {
                   </button>
                 </div>
                 {deepSearching && (
-                  <div style={{ marginTop: 16, padding: 16, background: "rgba(15,23,42,0.4)", borderRadius: 10 }}>
+                  <div style={{ marginTop: 16, padding: 16, background: "#f3f4f6", borderRadius: 10 }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {["Searching the web...", "Visiting conference websites...", "Verifying details..."].map((step, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, animation: `fadeIn ${0.3 + i * 0.4}s ease` }}>
                           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#f97316", animation: "pulse 1s infinite", animationDelay: `${i * 0.3}s` }} />
-                          <span style={{ fontSize: 13, color: "#fb923c" }}>{step}</span>
+                          <span style={{ fontSize: 13, color: "#374151" }}>{step}</span>
                         </div>
                       ))}
                     </div>
@@ -1173,10 +1159,10 @@ export default function App() {
             {filtered.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: "#94a3b8", margin: "0 0 8px" }}>No conferences match your filters</h3>
-                <p style={{ fontSize: 14, color: "#94a3b8" }}>Try broadening your search or use AI Deep Search to find niche events.</p>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: "#6b7280", margin: "0 0 8px" }}>No conferences match your filters</h3>
+                <p style={{ fontSize: 14, color: "#9ca3af" }}>Try broadening your search or use AI Deep Search to find niche events.</p>
               </div>
             )}
           </>
@@ -1185,20 +1171,20 @@ export default function App() {
 
       {/* Footer */}
       <div style={{
-        borderTop: "1px solid rgba(51,65,85,0.3)", padding: "32px",
-        background: "rgba(255,255,255,0.7)",
+        borderTop: "1px solid #e5e7eb", padding: "32px",
+        background: "#f3f4f6",
       }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 16, fontWeight: 800 }}>
-              <span style={{ color: "#f1f5f9" }}>Conference</span><span style={{ color: "#f97316" }}>Codes</span>
+              <span style={{ color: "#111827" }}>Conference</span><span style={{ color: "#f97316" }}>Codes</span>
             </span>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>\u00a9 2026</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>\u00a9 2026</span>
           </div>
           <div style={{ display: "flex", gap: 24 }}>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>Privacy</span>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>Terms</span>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>For Organizers</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>Privacy</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>Terms</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>For Organizers</span>
           </div>
         </div>
       </div>
@@ -1211,38 +1197,38 @@ export default function App() {
           display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: "#0f172a", border: "1px solid rgba(51,65,85,0.6)", borderRadius: 20,
-            padding: 32, width: "100%", maxWidth: 420,
+            background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20,
+            padding: 32, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
           }}>
             {submitDone ? (
               <div style={{ textAlign: "center", padding: "16px 0" }}>
                 <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>Thanks for the tip!</div>
-                <div style={{ fontSize: 14, color: "#94a3b8", marginBottom: 24 }}>We'll review it and add it to the list if it's a good fit.</div>
-                <button onClick={() => setSubmitModal(false)} style={{ padding: "10px 28px", borderRadius: 8, background: "rgba(51,65,85,0.5)", border: "1px solid rgba(71,85,105,0.4)", color: "#f1f5f9", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Close</button>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Thanks for the tip!</div>
+                <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 24 }}>We'll review it and add it to the list if it's a good fit.</div>
+                <button onClick={() => setSubmitModal(false)} style={{ padding: "10px 28px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #e5e7eb", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Close</button>
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>Submit a Conference</div>
-                <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 24 }}>Know a conference we're missing? Share the link.</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 6 }}>Submit a Conference</div>
+                <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>Know a conference we're missing? Share the link.</div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Conference URL *</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Conference URL *</label>
                   <input
                     type="url" placeholder="https://..." value={submitUrl}
                     onChange={e => setSubmitUrl(e.target.value)}
-                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: "1px solid rgba(51,65,85,0.6)", color: "#f1f5f9", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "#f9fafb", border: "1px solid #d1d5db", color: "#111827", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
                   />
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Your Email <span style={{ color: "#475569", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Your Email <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
                   <input
                     type="email" placeholder="you@email.com" value={submitEmail}
                     onChange={e => setSubmitEmail(e.target.value)}
-                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "rgba(30,41,59,0.8)", border: "1px solid rgba(51,65,85,0.6)", color: "#f1f5f9", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "#f9fafb", border: "1px solid #d1d5db", color: "#111827", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
                   />
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setSubmitModal(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: "rgba(51,65,85,0.4)", border: "1px solid rgba(71,85,105,0.4)", color: "#94a3b8", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => setSubmitModal(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: "#f3f4f6", border: "1px solid #e5e7eb", color: "#6b7280", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                   <button
                     disabled={!submitUrl.trim() || submitLoading}
                     onClick={async () => {
