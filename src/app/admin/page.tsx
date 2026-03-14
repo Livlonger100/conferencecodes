@@ -209,7 +209,7 @@ Return this exact structure:
   "language": "English" or "German" or "English/German" etc - the language(s) presentations are given in,
   "pricing": [
     {
-      "tier": "Early Bird" or "Standard" or "VIP" or "Student" or "Day Pass" or custom tier name,
+      "tier": "Use exact tier name from website",
       "price": 1234 or null,
       "currency": "USD",
       "deadline": "YYYY-MM-DD or null",
@@ -247,11 +247,15 @@ Return this exact structure:
   "extraction_notes": "Any issues encountered, fields you couldn't find, pages you checked"
 }
 
-CRITICAL PRICING RULES:
+CRITICAL PRICING AND TIER RULES:
+- ONLY extract tiers that are EXPLICITLY listed on the conference website. NEVER invent, infer, or add tiers that are not visible on the page (e.g. do not add a "Student" tier just because many conferences have one).
+- Use the EXACT tier name as shown on the website. Do not rename, embellish, or "improve" tier names. If the site says "Early Bird", use "Early Bird" — not "Super Early Bird", not "Early Access", not any variation.
+- Extract ALL tiers that ARE visible, including expensive/premium tiers. Do not skip high-priced tiers.
+- If a tier has expandable details (e.g. "More info" links), note in extraction_notes what you could and couldn't see.
 - NEVER guess, estimate, or fabricate a price. If the actual dollar/euro/pound amount is not explicitly shown on the page, set price to null.
 - Many ticketing platforms (Luma, Eventbrite, etc.) load prices via JavaScript that you cannot see. If you see tier names but no dollar amounts, set each price to null and note this in extraction_notes.
 - Always include Early Bird tiers even if the deadline has passed. Set deadline_passed to true if the deadline has passed or if the page says "Sales ended". The early bird price is still valuable historical data.
-- For pricing, look for ALL ticket tiers including day passes, single-day options, group rates, student rates, virtual tickets, press passes, academic rates
+- Extract every tier that appears on the page. Do not add any tier that is not explicitly listed.
 - If a tier requires approval (e.g. "Require Approval" on Luma), set requires_approval to true
 - If a tier is free (e.g. press passes, some virtual tickets), set price to 0
 - If the conference allows per-day attendance, create separate pricing entries for each day option
