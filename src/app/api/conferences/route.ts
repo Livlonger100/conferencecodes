@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       deadline_passed: t.deadline_passed || false,
       requires_approval: t.requires_approval || false,
       sold_out: t.sold_out || false,
+      is_early_bird: t.is_early_bird || false,
       sort_order: i,
     }));
     await supabaseAdmin.from("pricing_tiers").insert(tiers);
@@ -100,6 +101,7 @@ export async function PATCH(req: NextRequest) {
       deadline_passed: t.deadline_passed || false,
       requires_approval: t.requires_approval || false,
       sold_out: t.sold_out || false,
+      is_early_bird: t.is_early_bird || false,
       sort_order: i,
     }));
     await supabaseAdmin.from("pricing_tiers").insert(tiers);

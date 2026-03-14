@@ -15,6 +15,7 @@ function transformConference(c: any) {
   const timeTiers = tiers.filter((t: any) => t.deadline && !t.sold_out && new Date(t.deadline) > now);
   const earlyBird = timeTiers.length > 0 ? parseFloat(timeTiers[0].price) : null;
   const earlyBirdDeadline = timeTiers.length > 0 ? timeTiers[0].deadline : null;
+  const earlyBirdIsEarlyBird = timeTiers.length > 0 ? (timeTiers[0].is_early_bird || false) : false;
   
   return {
     id: c.id,
@@ -42,6 +43,7 @@ function transformConference(c: any) {
     price: highestPrice || lowestPrice || 0,
     earlyBird,
     earlyBirdDeadline,
+    earlyBirdIsEarlyBird,
     verified: true,
     lastVerified: c.updated_at ? c.updated_at.split("T")[0] : "",
     hotels: (c.hotels || []).map((h: any) => ({
@@ -60,6 +62,7 @@ function transformConference(c: any) {
       isTimeWindow: !!t.deadline,
       sold_out: t.sold_out || false,
       requires_approval: t.requires_approval || false,
+      isEarlyBird: t.is_early_bird || false,
     })),
   };
 }
@@ -170,11 +173,15 @@ function DynamicPricingBadge({ conf }) {
     // Fallback for old model
     if (conf.earlyBirdDeadline) {
       const days = daysUntil(conf.earlyBirdDeadline);
-      if (days < 0) return <span style={{ fontSize: 11, color: "#9ca3af" }}>Early bird expired</span>;
+      if (days < 0) return <span style={{ fontSize: 11, color: "#9ca3af" }}>{conf.earlyBirdIsEarlyBird ? "Early bird expired" : "Price increase passed"}</span>;
+      const color = days < 30 ? "#ef4444" : "#f59e0b";
+      const label = conf.earlyBirdIsEarlyBird
+        ? `Early bird: ${days} days left`
+        : `Price increases after ${formatDate(conf.earlyBirdDeadline)}`;
       return (
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={days < 30 ? "#ef4444" : "#f59e0b"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style={{ fontSize: 11, color: days < 30 ? "#ef4444" : "#f59e0b", fontWeight: 600 }}>Early bird: {days} days left</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style={{ fontSize: 11, color, fontWeight: 600 }}>{label}</span>
         </div>
       );
     }
@@ -389,7 +396,9 @@ function ConferenceDetail({ conf, onBack }) {
                       {tier.deadline && (
                         <div style={{ fontSize: 11, color: deadlinePassed ? "#9ca3af" : urgent ? "#ef4444" : "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          {deadlinePassed ? `Deadline passed (${formatDate(tier.deadline)})` : `Deadline: ${formatDate(tier.deadline)} — ${daysLeft}d left`}
+                          {deadlinePassed
+                            ? (tier.isEarlyBird ? `Early bird expired (${formatDate(tier.deadline)})` : `Price increase passed (${formatDate(tier.deadline)})`)
+                            : (tier.isEarlyBird ? `Early bird deadline: ${formatDate(tier.deadline)} — ${daysLeft}d left` : `Price increases after ${formatDate(tier.deadline)} — ${daysLeft}d left`)}
                         </div>
                       )}
                       {tier.priceAfterDeadline && !deadlinePassed && (
