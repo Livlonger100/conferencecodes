@@ -62,6 +62,7 @@ function transformConference(c: any) {
       deadline_passed: t.deadline_passed || false,
       requires_approval: t.requires_approval || false,
       sold_out: t.sold_out || false,
+      is_early_bird: t.is_early_bird || false,
     })),
     hotels: (c.hotels || []).map((h: any) => ({
       id: h.id,
@@ -124,6 +125,7 @@ function toDbFormat(conf: any) {
       deadline_passed: t.deadline_passed || false,
       requires_approval: t.requires_approval || false,
       sold_out: t.sold_out || false,
+      is_early_bird: t.is_early_bird || false,
       sort_order: i,
     })),
     hotels: (conf.hotels || []).map((h: any) => ({
@@ -566,7 +568,7 @@ function AdminTool() {
       setForm(f => ({ ...f, pricing: p }));
     };
     const addPricingTier = () => {
-      setForm(f => ({ ...f, pricing: [...f.pricing, { id: `tier_${Date.now()}`, tier: "Day Pass", price: null, price_after_deadline: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "", requires_approval: false, sold_out: false, notes: "" }] }));
+      setForm(f => ({ ...f, pricing: [...f.pricing, { id: `tier_${Date.now()}`, tier: "Day Pass", price: null, price_after_deadline: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "", requires_approval: false, sold_out: false, is_early_bird: false, notes: "" }] }));
     };
     const removePricingTier = (index) => {
       setForm(f => ({ ...f, pricing: f.pricing.filter((_, i) => i !== index) }));
@@ -660,33 +662,12 @@ function AdminTool() {
           </div>
         )}
 
-        {/* MISSING PRICES WARNING + QUICK FILL */}
+        {/* MISSING PRICES WARNING */}
         {form.pricing.some(t => t.price === null) && (
           <div style={{ ...S.card, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>Prices couldn't be auto-extracted</span>
-            </div>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>Many ticketing platforms load prices via JavaScript. Enter the prices manually below:</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {form.pricing.map((tier, i) => tier.price === null ? (
-                <div key={tier.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", minWidth: 160 }}>{tier.tier || `Tier ${i+1}`}</span>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>$</span>
-                  <input
-                    style={{ ...S.inputSm, width: 100, fontWeight: 700, fontSize: 14 }}
-                    type="number"
-                    placeholder="0"
-                    onChange={e => {
-                      const val = e.target.value === "" ? null : parseFloat(e.target.value) || 0;
-                      updatePricing(i, "price", val);
-                    }}
-                  />
-                  <span style={{ fontSize: 11, color: "#6b7280" }}>{tier.currency}</span>
-                  {tier.deadline_passed && <span style={{ fontSize: 10, color: "#ef4444", fontWeight: 600 }}>EXPIRED</span>}
-                  {tier.requires_approval && <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>APPROVAL</span>}
-                </div>
-              ) : null)}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{ fontSize: 13, color: "#92400e", lineHeight: 1.5 }}><strong>Prices couldn't be auto-extracted.</strong> Many ticketing platforms load prices via JavaScript. Enter prices manually in the Pricing Tiers section below.</span>
             </div>
           </div>
         )}
@@ -831,7 +812,7 @@ function AdminTool() {
                   <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.deadline || ""} onChange={e => updatePricing(i, "deadline", e.target.value || null)} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 2fr", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 2fr", gap: 8 }}>
                 <div>
                   <label style={S.label}>Days Included</label>
                   <input style={S.inputSm} value={tier.days_included || ""} onChange={e => updatePricing(i, "days_included", e.target.value)} placeholder='"all" or "Day 1 only"' />
@@ -852,6 +833,12 @@ function AdminTool() {
                   <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: isSoldOut ? "#ef4444" : "#374151" }}>
                     <input type="checkbox" checked={isSoldOut} onChange={e => updatePricing(i, "sold_out", e.target.checked)} />
                     Sold out
+                  </label>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: tier.is_early_bird ? "#f97316" : "#6b7280" }}>
+                    <input type="checkbox" checked={!!tier.is_early_bird} onChange={e => updatePricing(i, "is_early_bird", e.target.checked)} />
+                    Early bird
                   </label>
                 </div>
                 <div>
