@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 const BASE_URL = "https://conferencecodes.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { data } = await supabasePublic
+  const { data } = await supabaseAdmin
     .from("conferences")
     .select("slug, updated_at")
     .in("status", ["active", "sold_out"]);
