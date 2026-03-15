@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 const CATEGORIES = ["All", "AI / Tech", "Longevity / Health"];
 const FORMATS = ["All Formats", "In-person", "Virtual", "Hybrid"];
@@ -203,12 +204,13 @@ function DynamicPricingBadge({ conf }) {
   );
 }
 
-function ConferenceCard({ conf, onClick }) {
+function ConferenceCard({ conf }) {
   const [hovered, setHovered] = useState(false);
+  const router = useRouter();
   const duration = Math.ceil((new Date(conf.end) - new Date(conf.start)) / (1000 * 60 * 60 * 24)) + 1;
   return (
     <div
-      onClick={() => onClick(conf)}
+      onClick={() => router.push('/conference/' + conf.slug)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -802,7 +804,6 @@ export default function App() {
   const [format, setFormat] = useState("All Formats");
   const [searchQuery, setSearchQuery] = useState("");
   const [maxPrice, setMaxPrice] = useState(10000);
-  const [selectedConf, setSelectedConf] = useState(null);
   const [showDeepSearch, setShowDeepSearch] = useState(false);
   const [deepSearchQuery, setDeepSearchQuery] = useState("");
   const [deepSearching, setDeepSearching] = useState(false);
@@ -954,10 +955,7 @@ export default function App() {
 
       {/* MAIN CONTENT */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 32px 80px" }}>
-        {selectedConf ? (
-          <ConferenceDetail conf={selectedConf} onBack={() => { setSelectedConf(null); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
-        ) : (
-          <>
+        <>
             {/* SEARCH & FILTERS */}
             <div style={{
               background: "#ffffff", border: "1px solid #e5e7eb",
@@ -1187,7 +1185,7 @@ export default function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
               {filtered.map((conf, i) => (
                 <div key={conf.id} style={{ animation: `fadeIn ${0.15 + i * 0.05}s ease` }}>
-                  <ConferenceCard conf={conf} onClick={(c) => { setSelectedConf(c); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+                  <ConferenceCard conf={conf} />
                 </div>
               ))}
             </div>
@@ -1202,7 +1200,6 @@ export default function App() {
               </div>
             )}
           </>
-        )}
       </div>
 
       {/* Footer */}
