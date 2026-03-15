@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { supabasePublic } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 
 const BASE_URL = "https://conferencecodes.com";
 

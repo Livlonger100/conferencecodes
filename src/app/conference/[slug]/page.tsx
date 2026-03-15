@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { supabasePublic } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { transformConference } from "@/lib/conference-utils";
 import ConferenceDetailClient from "./ConferenceDetailClient";
 
@@ -12,18 +12,18 @@ export const revalidate = 3600;
 
 // Cached fetch — deduplicates between generateMetadata and the page render
 const getConference = cache(async (slug: string) => {
-  const { data } = await supabasePublic
+  const { data, error } = await supabaseAdmin
     .from("conferences")
     .select("*, pricing_tiers(*), hotels(*)")
     .eq("slug", slug)
-    .in("status", ["active", "sold_out"])
-    .single();
+    .maybeSingle();
+  if (error) console.error("getConference error:", error.message);
   return data ?? null;
 });
 
 // Pre-render all active conference pages at build time
 export async function generateStaticParams() {
-  const { data } = await supabasePublic
+  const { data } = await supabaseAdmin
     .from("conferences")
     .select("slug")
     .in("status", ["active", "sold_out"]);
