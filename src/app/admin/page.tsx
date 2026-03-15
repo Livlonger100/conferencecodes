@@ -48,6 +48,7 @@ function transformConference(c: any) {
       outreach_status: c.outreach_status || "not_contacted",
       affiliate: c.affiliate || "unknown",
       affiliate_details: c.affiliate_details || "",
+      affiliate_url: c.affiliate_url || "",
       notes: c.outreach_notes || "",
     },
     pricing: (c.pricing_tiers || []).sort((a: any, b: any) => (a.sort_order||0) - (b.sort_order||0)).map((t: any) => ({
@@ -113,6 +114,7 @@ function toDbFormat(conf: any) {
     outreach_status: conf.organizer_contact?.outreach_status || "not_contacted",
     affiliate: conf.organizer_contact?.affiliate || "unknown",
     affiliate_details: conf.organizer_contact?.affiliate_details || "",
+    affiliate_url: conf.organizer_contact?.affiliate_url || "",
     outreach_notes: conf.organizer_contact?.notes || "",
     pricing: (conf.pricing || []).map((t: any, i: number) => ({
       tier_name: t.tier || "",
@@ -695,7 +697,17 @@ function AdminTool() {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={S.label}>Source URL</label>
-            <input style={S.input} value={form.source_url} onChange={e => u("source_url", e.target.value)} placeholder="https://..." />
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input style={{ ...S.input, flex: 1 }} value={form.source_url} onChange={e => u("source_url", e.target.value)} placeholder="https://..." />
+              {form.source_url && (
+                <a href={form.source_url} target="_blank" rel="noopener noreferrer" title="Open in new tab" style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  padding: "0 10px", height: 36, borderRadius: 6, border: "1px solid #374151",
+                  background: "#1f2937", color: "#9ca3af", textDecoration: "none", fontSize: 14,
+                  flexShrink: 0, transition: "color 0.15s",
+                }}>↗</a>
+              )}
+            </div>
           </div>
           <div style={S.grid4}>
             <div>
@@ -990,7 +1002,14 @@ function AdminTool() {
             </div>
             <div>
               <label style={S.label}>Website</label>
-              <input style={S.input} value={form.organizer_contact?.website || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, website: e.target.value })} />
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input style={{ ...S.input, flex: 1 }} value={form.organizer_contact?.website || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, website: e.target.value })} />
+                {form.organizer_contact?.website && (
+                  <a href={form.organizer_contact.website} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, padding: "9px 10px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#6b7280", display: "flex", alignItems: "center", textDecoration: "none" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                )}
+              </div>
             </div>
             <div>
               <label style={S.label}>Outreach Status</label>
@@ -1019,6 +1038,17 @@ function AdminTool() {
             <div>
               <label style={S.label}>Affiliate / Commission Details</label>
               <input style={S.input} value={form.organizer_contact?.affiliate_details || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, affiliate_details: e.target.value })} placeholder="e.g. 15% commission, 30-day cookie, via Impact.com" />
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Affiliate Program URL</label>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input style={{ ...S.input, flex: 1 }} value={form.organizer_contact?.affiliate_url || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, affiliate_url: e.target.value })} placeholder="https://..." />
+              {form.organizer_contact?.affiliate_url && (
+                <a href={form.organizer_contact.affiliate_url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, padding: "9px 10px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#6b7280", display: "flex", alignItems: "center", textDecoration: "none" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              )}
             </div>
           </div>
           <div style={{ marginTop: 12 }}>

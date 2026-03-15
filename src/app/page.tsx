@@ -282,9 +282,26 @@ function ConferenceCard({ conf, onClick }) {
         })()}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
           <VerifiedBadge confidence={conf.confidence} lastVerified={conf.lastVerified} />
-          <span style={{
-            fontSize: 11, color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: 4,
-          }}>{conf.format}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{
+              fontSize: 11, color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: 4,
+            }}>{conf.format}</span>
+            {conf.source_url && (
+              <a
+                href={conf.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                style={{
+                  fontSize: 11, color: "#9ca3af", textDecoration: "none", padding: "2px 7px",
+                  borderRadius: 4, border: "1px solid #e5e7eb", background: "#fafafa",
+                  transition: "color 0.15s, border-color 0.15s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as any).style.color = "#f97316"; (e.currentTarget as any).style.borderColor = "rgba(249,115,22,0.3)"; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.color = "#9ca3af"; (e.currentTarget as any).style.borderColor = "#e5e7eb"; }}
+              >Website ↗</a>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -338,6 +355,16 @@ function ConferenceDetail({ conf, onBack }) {
         </div>
 
         <p style={{ fontSize: 15, color: "#374151", lineHeight: 1.6, margin: "16px 0" }}>{conf.description}</p>
+
+        {conf.source_url && (
+          <a href={conf.source_url} target="_blank" rel="noopener noreferrer" style={{
+            display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16,
+            fontSize: 14, fontWeight: 600, color: "#f97316", textDecoration: "none",
+          }}>
+            Visit Conference Website
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           {[
