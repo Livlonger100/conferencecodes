@@ -95,6 +95,21 @@ function formatPrice(p) {
   return p != null ? "$" + p.toLocaleString() : "TBA";
 }
 
+function getConferenceStatus(start, end) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(start);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = end ? new Date(end) : new Date(start);
+  endDate.setHours(0, 0, 0, 0);
+
+  if (today > endDate) return { status: "ended", label: "Ended", color: "#9ca3af", pulse: false };
+  if (today.getTime() === startDate.getTime()) return { status: "today", label: "Starts today", color: "#22c55e", pulse: false };
+  if (today > startDate && today <= endDate) return { status: "live", label: "Happening now", color: "#22c55e", pulse: true };
+  const days = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return { status: "upcoming", label: days === 1 ? "Tomorrow" : `${days} days away`, color: "#f97316", pulse: false };
+}
+
 // Determine current and next price from a conference's pricing tiers
 function getCurrentPricing(conf) {
   const now = new Date();
@@ -208,6 +223,8 @@ function ConferenceCard({ conf }) {
   const [hovered, setHovered] = useState(false);
   const router = useRouter();
   const duration = Math.ceil((new Date(conf.end) - new Date(conf.start)) / (1000 * 60 * 60 * 24)) + 1;
+  const confStatus = getConferenceStatus(conf.start, conf.end || null);
+  const isEnded = confStatus.status === "ended";
   return (
     <div
       onClick={() => router.push('/conference/' + conf.slug)}
@@ -221,17 +238,24 @@ function ConferenceCard({ conf }) {
         transform: hovered ? "translateY(-3px)" : "translateY(0)",
         boxShadow: hovered ? "0 12px 40px rgba(0,0,0,0.1), 0 0 20px rgba(249,115,22,0.06)" : "0 1px 4px rgba(0,0,0,0.06)",
         position: "relative", overflow: "hidden",
+        opacity: isEnded ? 0.6 : 1,
       }}
     >
       {hovered && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, #f97316, transparent)" }} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div>
-          <span style={{
-            display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase",
-            color: conf.category === "Longevity / Health" ? "#34d399" : "#60a5fa",
-            background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
-            padding: "3px 8px", borderRadius: 4, marginBottom: 8,
-          }}>{conf.category}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{
+              display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase",
+              color: conf.category === "Longevity / Health" ? "#34d399" : "#60a5fa",
+              background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
+              padding: "3px 8px", borderRadius: 4,
+            }}>{conf.category}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: confStatus.color, background: `${confStatus.color}18`, padding: "3px 8px", borderRadius: 4 }}>
+              {confStatus.pulse && <span style={{ width: 6, height: 6, borderRadius: "50%", background: confStatus.color, display: "inline-block", animation: "statusPulse 1.5s ease-in-out infinite" }} />}
+              {confStatus.label}
+            </span>
+          </div>
           <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>
             {conf.name}
             <span style={{ fontSize: 13, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>| {formatDateRange(conf.start, conf.end)}</span>
@@ -863,7 +887,17 @@ export default function HomeClient() {
       if (!searchable.includes(q)) return false;
     }
     return true;
-  }).sort((a, b) => new Date(a.start) - new Date(b.start));
+  }).sort((a, b) => {
+    const priority = (c) => {
+      const s = getConferenceStatus(c.start, c.end || null);
+      if (s.status === "live" || s.status === "today") return 0;
+      if (s.status === "upcoming") return 1;
+      return 2;
+    };
+    const pa = priority(a), pb = priority(b);
+    if (pa !== pb) return pa - pb;
+    return new Date(a.start) - new Date(b.start);
+  });
 
   const activeFilterCount = [
     category !== "All",
@@ -894,6 +928,7 @@ export default function HomeClient() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Space+Mono:wght@400;700&display=swap');
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.5; } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         @keyframes scanLine { 0% { transform: translateY(-100%); } 100% { transform: translateY(400%); } }
         * { box-sizing: border-box; }

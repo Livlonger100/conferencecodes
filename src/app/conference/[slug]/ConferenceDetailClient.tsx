@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  daysUntil, formatDate, formatDateRange, formatPrice, getCurrentPricing,
+  daysUntil, formatDate, formatDateRange, formatPrice, getCurrentPricing, getConferenceStatus,
 } from "@/lib/conference-utils";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -43,6 +43,7 @@ function ConferenceDetail({ conf, onBack }) {
 
   const duration = Math.ceil((new Date(conf.end).getTime() - new Date(conf.start).getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const daysAway = daysUntil(conf.start);
+  const confStatus = getConferenceStatus(conf.start, conf.end || null);
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -50,6 +51,13 @@ function ConferenceDetail({ conf, onBack }) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Back to results
       </button>
+
+      {confStatus.status === "ended" && (
+        <div style={{ background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span style={{ fontSize: 13, color: "#6b7280" }}>This conference has ended. Pricing shown for reference.</span>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: "24px 28px 20px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
@@ -79,14 +87,14 @@ function ConferenceDetail({ conf, onBack }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           {[
             { label: "Location", value: `${conf.city}, ${conf.country}` },
-            { label: "Dates", value: formatDateRange(conf.start, conf.end), sub: daysAway > 0 ? `${daysAway} days away` : null },
+            { label: "Dates", value: formatDateRange(conf.start, conf.end), sub: confStatus.label, subColor: confStatus.color },
             { label: "Duration", value: `${duration} days` },
             { label: "Attendees", value: conf.attendees ? conf.attendees.toLocaleString() : "TBA" },
           ].map((item, i) => (
             <div key={i} style={{ background: "#f9fafb", borderRadius: 10, padding: 12, border: "1px solid #f3f4f6" }}>
               <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{item.label}</div>
               <div style={{ fontSize: 14, color: "#111827", fontWeight: 600 }}>{item.value}</div>
-              {item.sub && <div style={{ fontSize: 11, color: "#f97316", marginTop: 2 }}>{item.sub}</div>}
+              {item.sub && <div style={{ fontSize: 11, color: item.subColor || "#f97316", marginTop: 2 }}>{item.sub}</div>}
             </div>
           ))}
         </div>

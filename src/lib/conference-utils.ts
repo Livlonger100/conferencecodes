@@ -80,6 +80,51 @@ export function formatPrice(p: number | null): string {
   return p != null ? "$" + p.toLocaleString() : "TBA";
 }
 
+export type ConferenceStatus = {
+  status: "live" | "today" | "upcoming" | "ended";
+  label: string;
+  color: string;
+  pulse: boolean;
+};
+
+export function getConferenceStatus(start: string, end: string | null): ConferenceStatus {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(start);
+  startDate.setHours(0, 0, 0, 0);
+  // treat null end as same-day event
+  const endDate = end ? new Date(end) : new Date(start);
+  endDate.setHours(0, 0, 0, 0);
+
+  if (today > endDate) {
+    return { status: "ended", label: "Ended", color: "#9ca3af", pulse: false };
+  }
+  if (today.getTime() === startDate.getTime()) {
+    return { status: "today", label: "Starts today", color: "#22c55e", pulse: false };
+  }
+  if (today > startDate && today <= endDate) {
+    return { status: "live", label: "Happening now", color: "#22c55e", pulse: true };
+  }
+  // upcoming
+  const days = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const label = days === 1 ? "Tomorrow" : `${days} days away`;
+  return { status: "upcoming", label, color: "#f97316", pulse: false };
+}
+
+export function sortConferences(conferences: any[]): any[] {
+  const priority = (c: any) => {
+    const s = getConferenceStatus(c.start, c.end || null);
+    if (s.status === "live" || s.status === "today") return 0;
+    if (s.status === "upcoming") return 1;
+    return 2; // ended
+  };
+  return [...conferences].sort((a, b) => {
+    const pa = priority(a), pb = priority(b);
+    if (pa !== pb) return pa - pb;
+    return new Date(a.start).getTime() - new Date(b.start).getTime();
+  });
+}
+
 export function getCurrentPricing(conf: any) {
   const now = new Date();
   const tiers = conf.pricingTiers || [];
