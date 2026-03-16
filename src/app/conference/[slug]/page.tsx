@@ -33,9 +33,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const data = await getConference(params.slug);
+  const { slug } = await params;
+  const data = await getConference(slug);
   if (!data) return { title: "Conference Not Found | ConferenceCodes" };
 
   const conf = transformConference(data);
@@ -68,9 +69,10 @@ export async function generateMetadata({
 export default async function ConferencePage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const data = await getConference(params.slug);
+  const { slug } = await params;
+  const data = await getConference(slug);
   if (!data) notFound();
 
   const conf = transformConference(data);
