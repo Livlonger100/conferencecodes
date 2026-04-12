@@ -407,12 +407,12 @@ export default function ConferenceDetailClient({ conf }: { conf: any }) {
       `}</style>
 
       {/* Nav */}
-      <div style={{ background: "var(--cc-ink)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ background: "#1C1B17", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
           <a href="/" style={{ textDecoration: "none" }}>
             <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>
               <span style={{ color: "#ffffff" }}>Conference</span>
-              <span style={{ color: "var(--cc-gold)" }}>Codes</span>
+              <span style={{ color: "#EDBA2A" }}>Codes</span>
             </span>
           </a>
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
@@ -428,14 +428,14 @@ export default function ConferenceDetailClient({ conf }: { conf: any }) {
       </div>
 
       {/* Footer */}
-      <div style={{ background: "var(--cc-ink)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ background: "#1C1B17", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>© 2026 ConferenceCodes</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>© 2026 ConferenceCodes</span>
           <div style={{ display: "flex", gap: 24 }}>
-            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>For Organizers</a>
-            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>How It Works</a>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Privacy</span>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Terms</span>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>For Organizers</a>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>How It Works</a>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Privacy</span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Terms</span>
           </div>
         </div>
       </div>

@@ -175,10 +175,10 @@ function DiscountBadge({ code, pct }) {
   return (
     <div style={{
       display: "inline-flex", alignItems: "center", gap: 6,
-      background: "linear-gradient(135deg, #f97316, #ea580c)", borderRadius: 6, padding: "5px 10px",
+      background: "var(--cc-gold)", borderRadius: 6, padding: "5px 10px",
     }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-      <span style={{ color: "#fff", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>{pct}% OFF</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cc-ink)" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <span style={{ color: "var(--cc-ink)", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>{pct}% OFF</span>
     </div>
   );
 }
@@ -221,14 +221,16 @@ function DynamicPricingBadge({ conf }) {
 
 function getCategoryStyle(category) {
   const map = {
-    "AI / Tech":         { bg: "#EEEDFE", text: "#3C3489" },
-    "Longevity / Health":{ bg: "#E1F5EE", text: "#085041" },
-    "SaaS":              { bg: "#E6F1FB", text: "#0C447C" },
-    "Biotech":           { bg: "#FAECE7", text: "#712B13" },
-    "Developer":         { bg: "#FEF7E0", text: "#8B6914" },
-    "Health tech":       { bg: "#FAEEDA", text: "#633806" },
+    "AI / Tech":          { bg: "#EEEDFE", text: "#3C3489" },
+    "AI/ML":              { bg: "#EEEDFE", text: "#3C3489" },
+    "Longevity / Health": { bg: "#E1F5EE", text: "#085041" },
+    "Longevity":          { bg: "#E1F5EE", text: "#085041" },
+    "SaaS":               { bg: "#E6F1FB", text: "#0C447C" },
+    "Biotech":            { bg: "#FAECE7", text: "#712B13" },
+    "Developer":          { bg: "#FEF7E0", text: "#8B6914" },
+    "Health tech":        { bg: "#FAEEDA", text: "#633806" },
   };
-  return map[category] || { bg: "#EEEDFE", text: "#3C3489" };
+  return map[category] || { bg: "#F5F1E8", text: "#4D4B42" };
 }
 
 function ConferenceCard({ conf }) {
@@ -282,9 +284,9 @@ function ConferenceCard({ conf }) {
           {formatDateRange(conf.start, conf.end)} · {conf.city}, {conf.country}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-          {conf.discount && conf.discountPct > 0 && (
+          {(conf.discount || conf.discountPct > 0) && (
             <span style={{ fontSize: 11, fontWeight: 500, background: "#E2F5D6", color: "#1D6B10", borderRadius: 6, padding: "2px 8px" }}>
-              {conf.discountPct}% off
+              {conf.discountPct > 0 ? `${conf.discountPct}% off` : "Code"}
             </span>
           )}
           {p.isEarlyBird && p.daysUntilIncrease && p.daysUntilIncrease > 0 && (
@@ -539,12 +541,12 @@ function ConferenceDetail({ conf, onBack }) {
             <div style={{ borderRadius: 12, overflow: "hidden" }}>
               {codeState === "locked" && (
                 <div style={{
-                  background: "linear-gradient(135deg, rgba(249,115,22,0.1), rgba(234,88,12,0.05))",
-                  border: "1px solid rgba(249,115,22,0.25)", borderRadius: 12, padding: 20, textAlign: "center",
+                  background: "var(--cc-gold-lt)",
+                  border: "1px solid var(--cc-gold)", borderRadius: 12, padding: 20, textAlign: "center",
                 }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316", marginBottom: 4 }}>{conf.discountPct}% OFF</div>
-                  <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 14 }}>Exclusive discount available for this conference</div>
-                  <div style={{ fontSize: 12, color: "#fb923c", marginBottom: 14 }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "var(--cc-gold-dk)", marginBottom: 4 }}>{conf.discountPct}% OFF</div>
+                  <div style={{ fontSize: 13, color: "var(--cc-muted)", marginBottom: 14 }}>Exclusive discount available for this conference</div>
+                  <div style={{ fontSize: 12, color: "var(--cc-gold-dk)", marginBottom: 14 }}>
                     {conf.earlyBird ? (
                       <span>Pay <span style={{ fontWeight: 800, fontSize: 16 }}>{formatPrice(Math.round(conf.earlyBird * (1 - conf.discountPct / 100)))}</span> instead of {formatPrice(conf.earlyBird)}</span>
                     ) : (
@@ -553,12 +555,11 @@ function ConferenceDetail({ conf, onBack }) {
                   </div>
                   <button onClick={handleGetCode} style={{
                     width: "100%", padding: "14px 24px", borderRadius: 10,
-                    background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none",
-                    color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                    boxShadow: "0 4px 20px rgba(249,115,22,0.3)",
+                    background: "var(--cc-gold)", border: "none",
+                    color: "var(--cc-ink)", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cc-ink)" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
                     Get Your Code — Free
                   </button>
                   <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>Limited codes available</div>
@@ -585,8 +586,8 @@ function ConferenceDetail({ conf, onBack }) {
                   />
                   <button onClick={handleSubmitEmail} style={{
                     width: "100%", padding: "12px 24px", borderRadius: 8,
-                    background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none",
-                    color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    background: "var(--cc-gold)", border: "none",
+                    color: "var(--cc-ink)", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                     opacity: email.includes("@") ? 1 : 0.5,
                   }}>Unlock My Code</button>
                   <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 8, textAlign: "center" }}>
@@ -597,23 +598,23 @@ function ConferenceDetail({ conf, onBack }) {
 
               {codeState === "revealed" && (
                 <div style={{
-                  background: "linear-gradient(135deg, #f97316, #ea580c)", borderRadius: 12, padding: 20, textAlign: "center",
+                  background: "var(--cc-gold)", borderRadius: 12, padding: 20, textAlign: "center",
                   animation: "fadeIn 0.3s ease",
                 }}>
-                  <div style={{ fontSize: 11, color: "rgba(15,23,42,0.6)", fontWeight: 600, letterSpacing: 1, marginBottom: 6 }}>YOUR EXCLUSIVE CODE</div>
+                  <div style={{ fontSize: 11, color: "rgba(28,27,23,0.6)", fontWeight: 600, letterSpacing: 1, marginBottom: 6 }}>YOUR EXCLUSIVE CODE</div>
                   <div style={{
-                    fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: 3,
-                    background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "12px 24px", display: "inline-block",
+                    fontSize: 26, fontWeight: 800, color: "var(--cc-ink)", letterSpacing: 3,
+                    background: "rgba(0,0,0,0.12)", borderRadius: 8, padding: "12px 24px", display: "inline-block",
                     fontFamily: "monospace", cursor: "pointer", position: "relative",
                   }} onClick={() => { navigator.clipboard && navigator.clipboard.writeText(revealedCode); }}>
                     {revealedCode}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" style={{ marginLeft: 10, verticalAlign: "middle" }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(28,27,23,0.5)" strokeWidth="2" style={{ marginLeft: 10, verticalAlign: "middle" }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                   </div>
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 10, fontWeight: 600 }}>Save {conf.discountPct}% on your ticket</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Code also sent to {email}</div>
+                  <div style={{ fontSize: 13, color: "var(--cc-ink)", marginTop: 10, fontWeight: 600 }}>Save {conf.discountPct}% on your ticket</div>
+                  <div style={{ fontSize: 11, color: "var(--cc-body)", marginTop: 4 }}>Code also sent to {email}</div>
                   <div style={{
-                    fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 12, padding: "8px 0",
-                    borderTop: "1px solid rgba(255,255,255,0.15)",
+                    fontSize: 11, color: "var(--cc-body)", marginTop: 12, padding: "8px 0",
+                    borderTop: "1px solid rgba(28,27,23,0.15)",
                   }}>Use this code on the conference\u2019s registration page at checkout</div>
                 </div>
               )}
@@ -785,22 +786,21 @@ function ConferenceDetail({ conf, onBack }) {
       <div style={{ textAlign: "center", marginTop: 32, display: "flex", gap: 16, justifyContent: "center" }}>
         {conf.discount && codeState === "locked" && (
           <button onClick={handleGetCode} style={{
-            background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: "none",
+            background: "var(--cc-gold)", color: "var(--cc-ink)", border: "none",
             padding: "16px 36px", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer",
-            letterSpacing: 0.5, boxShadow: "0 8px 30px rgba(249,115,22,0.3)", fontFamily: "inherit",
+            letterSpacing: 0.5, fontFamily: "inherit",
             display: "flex", alignItems: "center", gap: 8,
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cc-ink)" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Get {conf.discountPct}% Off Code
           </button>
         )}
         <button style={{
-          background: conf.discount && codeState !== "locked" ? "rgba(249,115,22,0.1)" : "linear-gradient(135deg, #f97316, #ea580c)",
-          color: conf.discount && codeState !== "locked" ? "#f97316" : "#fff",
-          border: conf.discount && codeState !== "locked" ? "1px solid rgba(249,115,22,0.3)" : "none",
+          background: conf.discount && codeState !== "locked" ? "rgba(0,0,0,0.05)" : "var(--cc-gold)",
+          color: conf.discount && codeState !== "locked" ? "var(--cc-body)" : "var(--cc-ink)",
+          border: conf.discount && codeState !== "locked" ? "1px solid rgba(0,0,0,0.15)" : "none",
           padding: "16px 36px", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer",
           letterSpacing: 0.5,
-          boxShadow: conf.discount && codeState !== "locked" ? "none" : "0 8px 30px rgba(249,115,22,0.3)",
           fontFamily: "inherit",
         }}>Book Now →</button>
       </div>
@@ -962,7 +962,7 @@ export default function HomeClient() {
 
       {!loading && <>
       {/* DARK NAV */}
-      <div style={{ background: "var(--cc-ink)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ background: "#1C1B17", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
           <a href="/" style={{ textDecoration: "none" }}>
             <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>
@@ -988,7 +988,7 @@ export default function HomeClient() {
       </div>
 
       {/* GOLD HERO BANNER */}
-      <div style={{ background: "var(--cc-gold)", padding: "48px 32px", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: "#EDBA2A", padding: "48px 32px", position: "relative", overflow: "hidden" }}>
         <div style={{
           position: "absolute", top: -80, right: -80,
           width: 280, height: 280, borderRadius: "50%",
@@ -997,16 +997,16 @@ export default function HomeClient() {
         <div style={{
           position: "absolute", bottom: -100, left: -60,
           width: 340, height: 340, borderRadius: "50%",
-          background: "rgba(255,255,255,0.08)", pointerEvents: "none",
+          background: "rgba(255,255,255,0.12)", pointerEvents: "none",
         }} />
         <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center", position: "relative" }}>
           <h1 style={{
             fontSize: 32, fontWeight: 600, letterSpacing: "-0.8px",
-            color: "var(--cc-ink)", margin: "0 0 10px 0", lineHeight: 1.2,
+            color: "#1C1B17", margin: "0 0 10px 0", lineHeight: 1.2,
           }}>
             Save on the world&apos;s best conferences
           </h1>
-          <p style={{ fontSize: 15, color: "var(--cc-gold-dk)", margin: 0, fontWeight: 400 }}>
+          <p style={{ fontSize: 15, color: "#8B6914", margin: 0, fontWeight: 400 }}>
             {CONFERENCES.length} verified conferences with active discount codes
           </p>
         </div>
@@ -1203,14 +1203,14 @@ export default function HomeClient() {
       </div>
 
       {/* DARK FOOTER */}
-      <div style={{ background: "var(--cc-ink)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ background: "#1C1B17", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>© 2026 ConferenceCodes</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>© 2026 ConferenceCodes</span>
           <div style={{ display: "flex", gap: 24 }}>
-            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>For Organizers</a>
-            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>How It Works</a>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Privacy</span>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Terms</span>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>For Organizers</a>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>How It Works</a>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Privacy</span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Terms</span>
           </div>
         </div>
       </div>
@@ -1263,7 +1263,7 @@ export default function HomeClient() {
                       setSubmitLoading(false);
                       setSubmitDone(true);
                     }}
-                    style={{ flex: 2, padding: "10px 0", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: !submitUrl.trim() || submitLoading ? "not-allowed" : "pointer", opacity: !submitUrl.trim() || submitLoading ? 0.6 : 1 }}
+                    style={{ flex: 2, padding: "10px 0", borderRadius: 8, background: "var(--cc-gold)", border: "none", color: "var(--cc-ink)", fontSize: 14, fontWeight: 700, cursor: !submitUrl.trim() || submitLoading ? "not-allowed" : "pointer", opacity: !submitUrl.trim() || submitLoading ? 0.6 : 1 }}
                   >{submitLoading ? "Submitting..." : "Submit"}</button>
                 </div>
               </>
