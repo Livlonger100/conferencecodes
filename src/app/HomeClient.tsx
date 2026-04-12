@@ -219,116 +219,106 @@ function DynamicPricingBadge({ conf }) {
   );
 }
 
+function getCategoryStyle(category) {
+  const map = {
+    "AI / Tech":         { bg: "#EEEDFE", text: "#3C3489" },
+    "Longevity / Health":{ bg: "#E1F5EE", text: "#085041" },
+    "SaaS":              { bg: "#E6F1FB", text: "#0C447C" },
+    "Biotech":           { bg: "#FAECE7", text: "#712B13" },
+    "Developer":         { bg: "#FEF7E0", text: "#8B6914" },
+    "Health tech":       { bg: "#FAEEDA", text: "#633806" },
+  };
+  return map[category] || { bg: "#EEEDFE", text: "#3C3489" };
+}
+
 function ConferenceCard({ conf }) {
   const [hovered, setHovered] = useState(false);
   const router = useRouter();
-  const duration = Math.ceil((new Date(conf.end) - new Date(conf.start)) / (1000 * 60 * 60 * 24)) + 1;
   const confStatus = getConferenceStatus(conf.start, conf.end || null);
   const isEnded = confStatus.status === "ended";
+  const catStyle = getCategoryStyle(conf.category);
+  const p = getCurrentPricing(conf);
+
+  const startDate = new Date(conf.start);
+  const monthAbbr = startDate.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+  const dayNum = startDate.getDate();
+
   return (
     <div
       onClick={() => router.push('/conference/' + conf.slug)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? "#fafafa" : "#ffffff",
-        border: `1px solid ${hovered ? "rgba(249,115,22,0.4)" : "#e5e7eb"}`,
-        borderRadius: 16, padding: 24, cursor: "pointer",
-        transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
-        transform: hovered ? "translateY(-3px)" : "translateY(0)",
-        boxShadow: hovered ? "0 12px 40px rgba(0,0,0,0.1), 0 0 20px rgba(249,115,22,0.06)" : "0 1px 4px rgba(0,0,0,0.06)",
-        position: "relative", overflow: "hidden",
+        background: "#ffffff",
+        border: `1px solid ${hovered ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.08)"}`,
+        borderRadius: 14,
+        padding: "16px 20px",
+        cursor: "pointer",
+        transition: "border-color 0.2s, box-shadow 0.2s",
+        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
         opacity: isEnded ? 0.6 : 1,
+        display: "grid",
+        gridTemplateColumns: "80px 1fr auto",
+        gap: 16,
+        alignItems: "center",
       }}
     >
-      {hovered && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, #f97316, transparent)" }} />}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{
-              display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase",
-              color: conf.category === "Longevity / Health" ? "#34d399" : "#60a5fa",
-              background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
-              padding: "3px 8px", borderRadius: 4,
-            }}>{conf.category}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: confStatus.color, background: `${confStatus.color}18`, padding: "3px 8px", borderRadius: 4 }}>
-              {confStatus.pulse && <span style={{ width: 6, height: 6, borderRadius: "50%", background: confStatus.color, display: "inline-block", animation: "statusPulse 1.5s ease-in-out infinite" }} />}
-              {confStatus.label}
+      {/* Date block */}
+      <div style={{
+        width: 80, height: 80, borderRadius: 12, flexShrink: 0,
+        background: catStyle.bg,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: catStyle.text, letterSpacing: "0.5px" }}>{monthAbbr}</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: catStyle.text, lineHeight: 1.1 }}>{dayNum}</div>
+      </div>
+
+      {/* Info */}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 4, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {conf.name}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--cc-muted)", marginBottom: 8 }}>
+          {formatDateRange(conf.start, conf.end)} · {conf.city}, {conf.country}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+          {conf.discount && conf.discountPct > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 500, background: "#E2F5D6", color: "#1D6B10", borderRadius: 6, padding: "2px 8px" }}>
+              {conf.discountPct}% off
             </span>
-          </div>
-          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>
-            {conf.name}
-            <span style={{ fontSize: 13, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>| {formatDateRange(conf.start, conf.end)}</span>
-          </h3>
-        </div>
-        <DiscountBadge code={conf.discount} pct={conf.discountPct} />
-      </div>
-
-      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px 0", lineHeight: 1.5 }}>{conf.description}</p>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <span style={{ fontSize: 13, color: "#374151" }}>{conf.city}, {conf.country}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style={{ fontSize: 13, color: "#374151" }}>{duration} days</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          <span style={{ fontSize: 13, color: "#374151" }}>{conf.attendees ? conf.attendees.toLocaleString() : "TBA"} attendees</span>
+          )}
+          {p.isEarlyBird && p.daysUntilIncrease && p.daysUntilIncrease > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 500, background: "var(--cc-gold-bg)", color: "var(--cc-gold-dk)", borderRadius: 6, padding: "2px 8px" }}>
+              Early bird
+            </span>
+          )}
+          <span style={{ fontSize: 11, fontWeight: 500, background: catStyle.bg, color: catStyle.text, borderRadius: 6, padding: "2px 8px" }}>
+            {conf.category}
+          </span>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: "1px solid #e5e7eb" }}>
-        <div>
-          {(() => {
-            const p = getCurrentPricing(conf);
-            return (
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 22, fontWeight: 800, color: "#f97316" }}>{formatPrice(p.currentPrice)}</span>
-                {p.currentPrice < p.standardPrice && (
-                  <span style={{ fontSize: 14, fontWeight: 400, color: "#9ca3af", textDecoration: "line-through" }}>{formatPrice(p.standardPrice)}</span>
-                )}
-              </div>
-            );
-          })()}
-          <DynamicPricingBadge conf={conf} />
-        </div>
-        {conf.hotels && conf.hotels.length > 0 && (() => {
-          const cheapest = conf.hotels.reduce((a, b) => a.confRate < b.confRate ? a : b);
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.12)", borderRadius: 8, padding: "6px 10px" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11"/></svg>
-              <span style={{ fontSize: 12, color: "#60a5fa", fontWeight: 600 }}>from {formatPrice(cheapest.confRate)}/nt</span>
-              <span style={{ fontSize: 11, color: "#94a3b8", textDecoration: "line-through" }}>{formatPrice(cheapest.rackRate)}</span>
-            </div>
-          );
-        })()}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-          <VerifiedBadge confidence={conf.confidence} lastVerified={conf.lastVerified} />
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{
-              fontSize: 11, color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: 4,
-            }}>{conf.format}</span>
-            {conf.source_url && (
-              <a
-                href={conf.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
-                style={{
-                  fontSize: 11, color: "#9ca3af", textDecoration: "none", padding: "2px 7px",
-                  borderRadius: 4, border: "1px solid #e5e7eb", background: "#fafafa",
-                  transition: "color 0.15s, border-color 0.15s",
-                }}
-                onMouseEnter={e => { (e.currentTarget as any).style.color = "#f97316"; (e.currentTarget as any).style.borderColor = "rgba(249,115,22,0.3)"; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.color = "#9ca3af"; (e.currentTarget as any).style.borderColor = "#e5e7eb"; }}
-              >Website ↗</a>
-            )}
-          </div>
-        </div>
+      {/* Get code button */}
+      <div style={{ flexShrink: 0 }}>
+        <button
+          onClick={e => { e.stopPropagation(); router.push('/conference/' + conf.slug); }}
+          style={{
+            background: "var(--cc-gold)",
+            color: "var(--cc-ink)",
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 18px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+            opacity: hovered ? 0.88 : 1,
+            transition: "opacity 0.15s",
+          }}
+        >
+          Get code
+        </button>
       </div>
     </div>
   );
@@ -837,6 +827,10 @@ export default function HomeClient() {
   const [submitEmail, setSubmitEmail] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitDone, setSubmitDone] = useState(false);
+  const [sortBy, setSortBy] = useState("date");
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [countryFilter, setCountryFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -849,10 +843,16 @@ export default function HomeClient() {
       .catch(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [category, countryFilter, cityFilter, dateFrom, searchQuery, sortBy]);
+
   const CONFERENCES = conferences;
 
   // Derive unique cities, countries, regions from data
   const allLocations = [...new Set(CONFERENCES.flatMap(c => [c.city, c.country, c.region]))];
+  const allCountries = [...new Set(CONFERENCES.map(c => c.country))].filter(Boolean).sort();
+  const allCities = [...new Set(CONFERENCES.map(c => c.city))].filter(Boolean).sort();
 
   const filtered = CONFERENCES.filter(c => {
     if (category !== "All" && c.category !== category) return false;
@@ -864,6 +864,8 @@ export default function HomeClient() {
       const loc = `${c.city} ${c.country} ${c.region}`.toLowerCase();
       if (!loc.includes(q)) return false;
     }
+    if (countryFilter && c.country !== countryFilter) return false;
+    if (cityFilter && c.city !== cityFilter) return false;
 
     // Date range: conference overlaps with selected range
     if (dateFrom) {
@@ -899,17 +901,25 @@ export default function HomeClient() {
     return new Date(a.start) - new Date(b.start);
   });
 
+  const sortedFiltered = sortBy === "date" ? filtered : [...filtered].sort((a, b) => {
+    if (sortBy === "discount") return (b.discountPct || 0) - (a.discountPct || 0);
+    if (sortBy === "recent") return new Date(b.lastVerified).getTime() - new Date(a.lastVerified).getTime();
+    return 0;
+  });
+
   const activeFilterCount = [
     category !== "All",
     locationQuery !== "",
+    countryFilter !== "",
+    cityFilter !== "",
     dateFrom !== "",
     dateTo !== "",
     format !== "All Formats",
   ].filter(Boolean).length;
 
   const clearFilters = () => {
-    setCategory("All"); setLocationQuery(""); setDateFrom(""); setDateTo("");
-    setFormat("All Formats"); setSearchQuery("");
+    setCategory("All"); setLocationQuery(""); setCountryFilter(""); setCityFilter("");
+    setDateFrom(""); setDateTo(""); setFormat("All Formats"); setSearchQuery("");
   };
 
   const handleDeepSearch = () => {
@@ -920,345 +930,287 @@ export default function HomeClient() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#f8f9fa",
-      fontFamily: "'DM Sans', -apple-system, sans-serif",
-      color: "#111827",
+      minHeight: "100vh",
+      background: "var(--cc-cream)",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      color: "var(--cc-ink)",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Space+Mono:wght@400;700&display=swap');
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
         @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.5; } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        @keyframes scanLine { 0% { transform: translateY(-100%); } 100% { transform: translateY(400%); } }
         * { box-sizing: border-box; }
-        input:focus, select:focus { outline: none; border-color: rgba(249,115,22,0.5) !important; }
-        input::placeholder { color: #9ca3af; }
+        input:focus, select:focus { outline: none; border-color: var(--cc-gold) !important; }
+        input::placeholder { color: var(--cc-muted); }
         select { appearance: none; -webkit-appearance: none; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.5); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(138,136,128,0.4); border-radius: 3px; }
       `}</style>
 
       {loading && (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#f97316", marginBottom: 8 }}>ConferenceCodes</div>
-            <div style={{ color: "#6b7280" }}>Loading conferences...</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 8 }}>
+              Conference<span style={{ color: "var(--cc-gold)" }}>Codes</span>
+            </div>
+            <div style={{ color: "var(--cc-muted)", fontSize: 14 }}>Loading conferences...</div>
           </div>
         </div>
       )}
 
       {!loading && <>
       {/* DARK NAV */}
-      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 64 }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 15px rgba(249,115,22,0.3)",
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>
-              <span style={{ color: "#f1f5f9" }}>Conference</span>
-              <span style={{ color: "#f97316" }}>Codes</span>
+      <div style={{ background: "var(--cc-ink)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
+          <a href="/" style={{ textDecoration: "none" }}>
+            <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>
+              <span style={{ color: "#ffffff" }}>Conference</span>
+              <span style={{ color: "var(--cc-gold)" }}>Codes</span>
             </span>
           </a>
-          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            <a href="/ai-conferences" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>AI Conferences</a>
-            <a href="/longevity-conferences" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>Longevity</a>
-            <a href="/how-it-works" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>How It Works</a>
-            <a href="/for-organizers" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>For Organizers</a>
-            <button onClick={() => { setSubmitModal(true); setSubmitDone(false); setSubmitUrl(""); setSubmitEmail(""); }} style={{
-              background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)",
-              color: "#f97316", padding: "8px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-            }}>Submit a Conference</button>
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            <a href="/ai-conferences" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>AI Conferences</a>
+            <a href="/longevity-conferences" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>Longevity</a>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>How It Works</a>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>For Organizers</a>
+            <button
+              onClick={() => { setSubmitModal(true); setSubmitDone(false); setSubmitUrl(""); setSubmitEmail(""); }}
+              style={{
+                background: "transparent", border: "1px solid rgba(255,255,255,0.25)",
+                color: "rgba(255,255,255,0.65)", padding: "7px 18px", borderRadius: 10,
+                fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >Submit a Conference</button>
           </div>
         </nav>
       </div>
 
-      {/* LIGHT HERO */}
-      <div style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", padding: "20px 32px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
-          <h1 style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.2, margin: "0 0 12px 0", color: "#111827" }}>
-            Conference discount codes.{" "}
-            <span style={{ fontSize: 16, fontWeight: 600, color: "#6b7280", whiteSpace: "nowrap" }}>({CONFERENCES.length} verified)</span>
+      {/* GOLD HERO BANNER */}
+      <div style={{ background: "var(--cc-gold)", padding: "48px 32px", position: "relative", overflow: "hidden" }}>
+        <div style={{
+          position: "absolute", top: -80, right: -80,
+          width: 280, height: 280, borderRadius: "50%",
+          background: "rgba(255,255,255,0.12)", pointerEvents: "none",
+        }} />
+        <div style={{
+          position: "absolute", bottom: -100, left: -60,
+          width: 340, height: 340, borderRadius: "50%",
+          background: "rgba(255,255,255,0.08)", pointerEvents: "none",
+        }} />
+        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center", position: "relative" }}>
+          <h1 style={{
+            fontSize: 32, fontWeight: 600, letterSpacing: "-0.8px",
+            color: "var(--cc-ink)", margin: "0 0 10px 0", lineHeight: 1.2,
+          }}>
+            Save on the world&apos;s best conferences
           </h1>
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <a href="/ai-conferences" style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa", background: "rgba(96,165,250,0.1)", padding: "5px 14px", borderRadius: 20, textDecoration: "none", border: "1px solid rgba(96,165,250,0.2)" }}>AI / Tech conferences →</a>
-            <a href="/longevity-conferences" style={{ fontSize: 12, fontWeight: 600, color: "#34d399", background: "rgba(52,211,153,0.1)", padding: "5px 14px", borderRadius: 20, textDecoration: "none", border: "1px solid rgba(52,211,153,0.2)" }}>Longevity / Health conferences →</a>
+          <p style={{ fontSize: 15, color: "var(--cc-gold-dk)", margin: 0, fontWeight: 400 }}>
+            {CONFERENCES.length} verified conferences with active discount codes
+          </p>
+        </div>
+      </div>
+
+      {/* SEARCH & FILTER PANEL */}
+      <div style={{ background: "#ffffff", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px" }}>
+          {/* Search bar */}
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <svg style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cc-muted)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              type="text" placeholder="Search conferences, speakers, topics..."
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              style={{
+                width: "100%", padding: "12px 110px 12px 42px", borderRadius: 8,
+                background: "#f9fafb", border: "1px solid #d1d5db",
+                color: "var(--cc-ink)", fontSize: 14, fontFamily: "inherit", outline: "none",
+              }}
+            />
+            <button
+              onClick={() => (document.activeElement as HTMLElement)?.blur()}
+              style={{
+                position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                padding: "7px 20px", borderRadius: 7,
+                background: "var(--cc-ink)", border: "none",
+                color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >Search</button>
+          </div>
+
+          {/* 4-column filter grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Subject</div>
+              <select
+                value={category} onChange={e => setCategory(e.target.value)}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: 8,
+                  background: "#f9fafb", border: "1px solid #d1d5db",
+                  color: "var(--cc-body)", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                  appearance: "none", WebkitAppearance: "none", outline: "none",
+                }}
+              >
+                {CATEGORIES.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Date from</div>
+              <input
+                type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                style={{
+                  width: "100%", padding: "9px 10px", borderRadius: 8,
+                  background: "#f9fafb", border: "1px solid #d1d5db",
+                  color: "var(--cc-body)", fontSize: 13, fontFamily: "inherit", outline: "none",
+                  colorScheme: "light",
+                }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Country</div>
+              <select
+                value={countryFilter} onChange={e => setCountryFilter(e.target.value)}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: 8,
+                  background: "#f9fafb", border: "1px solid #d1d5db",
+                  color: "var(--cc-body)", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                  appearance: "none", WebkitAppearance: "none", outline: "none",
+                }}
+              >
+                <option value="">All Countries</option>
+                {allCountries.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>City</div>
+              <select
+                value={cityFilter} onChange={e => setCityFilter(e.target.value)}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: 8,
+                  background: "#f9fafb", border: "1px solid #d1d5db",
+                  color: "var(--cc-body)", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
+                  appearance: "none", WebkitAppearance: "none", outline: "none",
+                }}
+              >
+                <option value="">All Cities</option>
+                {allCities.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Active filter tags */}
+          {activeFilterCount > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+              {category !== "All" && (
+                <span style={{ fontSize: 11, color: "var(--cc-gold-dk)", background: "var(--cc-gold-bg)", borderRadius: 20, padding: "4px 12px", display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
+                  {category}
+                  <button onClick={() => setCategory("All")} style={{ background: "none", border: "none", color: "var(--cc-gold-dk)", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+                </span>
+              )}
+              {countryFilter && (
+                <span style={{ fontSize: 11, color: "var(--cc-gold-dk)", background: "var(--cc-gold-bg)", borderRadius: 20, padding: "4px 12px", display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
+                  {countryFilter}
+                  <button onClick={() => setCountryFilter("")} style={{ background: "none", border: "none", color: "var(--cc-gold-dk)", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+                </span>
+              )}
+              {cityFilter && (
+                <span style={{ fontSize: 11, color: "var(--cc-gold-dk)", background: "var(--cc-gold-bg)", borderRadius: 20, padding: "4px 12px", display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
+                  {cityFilter}
+                  <button onClick={() => setCityFilter("")} style={{ background: "none", border: "none", color: "var(--cc-gold-dk)", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+                </span>
+              )}
+              {dateFrom && (
+                <span style={{ fontSize: 11, color: "var(--cc-gold-dk)", background: "var(--cc-gold-bg)", borderRadius: 20, padding: "4px 12px", display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
+                  From {dateFrom}
+                  <button onClick={() => setDateFrom("")} style={{ background: "none", border: "none", color: "var(--cc-gold-dk)", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+                </span>
+              )}
+              <button onClick={clearFilters} style={{
+                background: "none", border: "none", color: "var(--cc-muted)", cursor: "pointer",
+                fontSize: 12, fontFamily: "inherit", textDecoration: "underline", padding: 0, marginLeft: 4,
+              }}>Clear all</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* RESULTS BAR */}
+      <div style={{ background: "var(--cc-warm-gray)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: "var(--cc-body)" }}>
+            Showing <span style={{ color: "var(--cc-ink)", fontWeight: 600 }}>{filtered.length}</span> conferences with active codes
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 11, color: "var(--cc-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.6px" }}>Sort</span>
+            <select
+              value={sortBy} onChange={e => setSortBy(e.target.value)}
+              style={{
+                padding: "6px 28px 6px 10px", borderRadius: 8, fontSize: 12,
+                background: "#fff", border: "1px solid rgba(0,0,0,0.12)",
+                color: "var(--cc-body)", fontFamily: "inherit", cursor: "pointer",
+                appearance: "none", WebkitAppearance: "none", outline: "none",
+              }}
+            >
+              <option value="date">Date soonest</option>
+              <option value="discount">Biggest discount</option>
+              <option value="recent">Recently added</option>
+            </select>
           </div>
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 32px 80px" }}>
-        <>
-            {/* SEARCH & FILTERS */}
-            <div style={{
-              background: "#ffffff", border: "1px solid #e5e7eb",
-              borderRadius: 16, padding: "16px 20px", marginBottom: 24,
-              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-            }}>
-              {/* Search bar */}
-              <div style={{ position: "relative", marginBottom: 12 }}>
-                <svg style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input
-                  type="text" placeholder="Search conferences, speakers, topics..."
-                  value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                  style={{
-                    width: "100%", padding: "12px 110px 12px 48px", borderRadius: 10,
-                    background: "#f9fafb", border: "1px solid #d1d5db",
-                    color: "#111827", fontSize: 15, fontFamily: "inherit", outline: "none",
-                  }}
-                />
-                <button
-                  onClick={() => (document.activeElement as HTMLElement)?.blur()}
-                  style={{
-                    position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
-                    padding: "7px 20px", borderRadius: 7,
-                    background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none",
-                    color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                  }}>Search</button>
+      {/* CONFERENCE LISTING */}
+      <div style={{ background: "var(--cc-cream)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 32px 80px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {sortedFiltered.slice(0, visibleCount).map((conf, i) => (
+              <div key={conf.id} style={{ animation: `fadeIn ${0.1 + i * 0.04}s ease` }}>
+                <ConferenceCard conf={conf} />
               </div>
+            ))}
+          </div>
 
-              {/* Single filter row: Category | Location | Format | From | To */}
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-                <div style={{ flex: "1 1 140px", minWidth: 120 }}>
-                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Category</div>
-                  <select value={category} onChange={e => setCategory(e.target.value)} style={{
-                    width: "100%", padding: "8px 12px", borderRadius: 8,
-                    background: category !== "All" ? "rgba(249,115,22,0.08)" : "#f9fafb",
-                    border: category !== "All" ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
-                    color: category !== "All" ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
-                    appearance: "none", WebkitAppearance: "none", outline: "none",
-                  }}>
-                    {CATEGORIES.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-
-                <div style={{ flex: "2 1 180px", minWidth: 140 }}>
-                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Location</div>
-                  <div style={{ position: "relative" }}>
-                    <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <input
-                      type="text" placeholder="City, country, region…"
-                      value={locationQuery} onChange={e => setLocationQuery(e.target.value)}
-                      style={{
-                        width: "100%", padding: "8px 28px 8px 28px", borderRadius: 8,
-                        background: locationQuery ? "rgba(249,115,22,0.08)" : "#f9fafb",
-                        border: locationQuery ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
-                        color: locationQuery ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      }}
-                    />
-                    {locationQuery && (
-                      <button onClick={() => setLocationQuery("")} style={{
-                        position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
-                        background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 16, padding: 2,
-                      }}>&times;</button>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ flex: "1 1 120px", minWidth: 110 }}>
-                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>Format</div>
-                  <select value={format} onChange={e => setFormat(e.target.value)} style={{
-                    width: "100%", padding: "8px 12px", borderRadius: 8,
-                    background: format !== "All Formats" ? "rgba(249,115,22,0.08)" : "#f9fafb",
-                    border: format !== "All Formats" ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
-                    color: format !== "All Formats" ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", cursor: "pointer",
-                    appearance: "none", WebkitAppearance: "none", outline: "none",
-                  }}>
-                    {FORMATS.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-
-                <div style={{ flex: "1 1 130px", minWidth: 120 }}>
-                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>From</div>
-                  <input
-                    type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                    style={{
-                      width: "100%", padding: "8px 10px", borderRadius: 8,
-                      background: dateFrom ? "rgba(249,115,22,0.08)" : "#f9fafb",
-                      border: dateFrom ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
-                      color: dateFrom ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      colorScheme: "light",
-                    }}
-                  />
-                </div>
-
-                <div style={{ flex: "1 1 130px", minWidth: 120 }}>
-                  <div style={{ fontSize: 10, color: "#374151", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 5 }}>To</div>
-                  <input
-                    type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                    style={{
-                      width: "100%", padding: "8px 10px", borderRadius: 8,
-                      background: dateTo ? "rgba(249,115,22,0.08)" : "#f9fafb",
-                      border: dateTo ? "1px solid rgba(249,115,22,0.4)" : "1px solid #d1d5db",
-                      color: dateTo ? "#f97316" : "#374151", fontSize: 13, fontFamily: "inherit", outline: "none",
-                      colorScheme: "light",
-                    }}
-                  />
-                </div>
-
-                {/* Quick date presets */}
-                <div style={{ flex: "2 1 260px", display: "flex", gap: 5, flexWrap: "wrap", paddingBottom: 1 }}>
-                  {[
-                    { label: "This month", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n.getFullYear(), n.getMonth() + 1, 0); setDateTo(e.toISOString().split("T")[0]); }},
-                    { label: "Next 30d", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n); e.setDate(e.getDate() + 30); setDateTo(e.toISOString().split("T")[0]); }},
-                    { label: "Next 3mo", fn: () => { const n = new Date(); setDateFrom(n.toISOString().split("T")[0]); const e = new Date(n); e.setMonth(e.getMonth() + 3); setDateTo(e.toISOString().split("T")[0]); }},
-                    { label: "Q2 2026", fn: () => { setDateFrom("2026-04-01"); setDateTo("2026-06-30"); }},
-                    { label: "Q3 2026", fn: () => { setDateFrom("2026-07-01"); setDateTo("2026-09-30"); }},
-                  ].map((p, i) => (
-                    <button key={i} onClick={p.fn} style={{
-                      padding: "5px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                      background: "#f3f4f6", border: "1px solid #e5e7eb",
-                      color: "#6b7280", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                    }}>{p.label}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Active filters + clear */}
-              {activeFilterCount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {category !== "All" && (
-                      <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        {category} <button onClick={() => setCategory("All")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
-                      </span>
-                    )}
-                    {locationQuery && (
-                      <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        {locationQuery} <button onClick={() => setLocationQuery("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
-                      </span>
-                    )}
-                    {dateFrom && (
-                      <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        From {dateFrom} <button onClick={() => setDateFrom("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
-                      </span>
-                    )}
-                    {dateTo && (
-                      <span style={{ fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 6, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        To {dateTo} <button onClick={() => setDateTo("")} style={{ background: "none", border: "none", color: "#f97316", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
-                      </span>
-                    )}
-                  </div>
-                  <button onClick={clearFilters} style={{
-                    background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 12, fontFamily: "inherit",
-                    textDecoration: "underline",
-                  }}>Clear all filters</button>
-                </div>
-              )}
+          {filtered.length === 0 && (
+            <div style={{ textAlign: "center", padding: "60px 20px" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" style={{ display: "block", margin: "0 auto 16px" }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 8px" }}>No conferences match your filters</h3>
+              <p style={{ fontSize: 14, color: "var(--cc-muted)", margin: 0 }}>Try broadening your search.</p>
             </div>
+          )}
 
-            {/* Results header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <span style={{ fontSize: 14, color: "#6b7280" }}>
-                  Showing <span style={{ color: "#111827", fontWeight: 700 }}>{filtered.length}</span> verified conferences
-                </span>
-              </div>
-              <button onClick={() => setShowDeepSearch(!showDeepSearch)} style={{
-                display: "flex", alignItems: "center", gap: 8,
-                background: showDeepSearch ? "rgba(249,115,22,0.08)" : "#f3f4f6",
-                border: `1px solid ${showDeepSearch ? "rgba(249,115,22,0.3)" : "#e5e7eb"}`,
-                color: showDeepSearch ? "#f97316" : "#6b7280", padding: "8px 16px", borderRadius: 10,
-                fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 8v4l2 2"/></svg>
-                AI Deep Search
+          {/* LOAD MORE */}
+          {visibleCount < sortedFiltered.length && (
+            <div style={{ textAlign: "center", marginTop: 32 }}>
+              <button
+                onClick={() => setVisibleCount(v => v + 10)}
+                style={{
+                  padding: "12px 36px", borderRadius: 10,
+                  background: "transparent", border: "1px solid rgba(0,0,0,0.15)",
+                  color: "var(--cc-body)", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(0,0,0,0.3)")}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(0,0,0,0.15)")}
+              >
+                Load more conferences
               </button>
             </div>
-
-            {/* Deep Search Panel */}
-            {showDeepSearch && (
-              <div style={{
-                background: "linear-gradient(135deg, rgba(249,115,22,0.05), rgba(234,88,12,0.02))",
-                border: "1px solid rgba(249,115,22,0.2)", borderRadius: 16, padding: 24, marginBottom: 24,
-                animation: "fadeIn 0.3s ease",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 8v4l2 2"/></svg>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#f97316" }}>AI Deep Search</span>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>\u2014 Find niche conferences not yet in our database</span>
-                </div>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <input
-                    type="text" placeholder='Try: "peptide therapy conferences in Florida before June"'
-                    value={deepSearchQuery} onChange={e => setDeepSearchQuery(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleDeepSearch()}
-                    style={{
-                      flex: 1, padding: "12px 16px", borderRadius: 10,
-                      background: "#ffffff", border: "1px solid #d1d5db",
-                      color: "#111827", fontSize: 14, fontFamily: "inherit",
-                    }}
-                  />
-                  <button onClick={handleDeepSearch} disabled={deepSearching} style={{
-                    background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff",
-                    border: "none", padding: "12px 24px", borderRadius: 10, fontSize: 14, fontWeight: 700,
-                    cursor: deepSearching ? "not-allowed" : "pointer", fontFamily: "inherit",
-                    opacity: deepSearching ? 0.7 : 1,
-                  }}>
-                    {deepSearching ? "Searching..." : "Search"}
-                  </button>
-                </div>
-                {deepSearching && (
-                  <div style={{ marginTop: 16, padding: 16, background: "#f3f4f6", borderRadius: 10 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {["Searching the web...", "Visiting conference websites...", "Verifying details..."].map((step, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, animation: `fadeIn ${0.3 + i * 0.4}s ease` }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#f97316", animation: "pulse 1s infinite", animationDelay: `${i * 0.3}s` }} />
-                          <span style={{ fontSize: 13, color: "#374151" }}>{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Conference grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-              {filtered.map((conf, i) => (
-                <div key={conf.id} style={{ animation: `fadeIn ${0.15 + i * 0.05}s ease` }}>
-                  <ConferenceCard conf={conf} />
-                </div>
-              ))}
-            </div>
-
-            {filtered.length === 0 && (
-              <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: "#6b7280", margin: "0 0 8px" }}>No conferences match your filters</h3>
-                <p style={{ fontSize: 14, color: "#9ca3af" }}>Try broadening your search or use AI Deep Search to find niche events.</p>
-              </div>
-            )}
-          </>
+          )}
+        </div>
       </div>
 
-      {/* Footer */}
-      <div style={{
-        borderTop: "1px solid #e5e7eb", padding: "32px",
-        background: "#f3f4f6",
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16, fontWeight: 800 }}>
-              <span style={{ color: "#111827" }}>Conference</span><span style={{ color: "#f97316" }}>Codes</span>
-            </span>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>\u00a9 2026</span>
-          </div>
+      {/* DARK FOOTER */}
+      <div style={{ background: "var(--cc-ink)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>© 2026 ConferenceCodes</span>
           <div style={{ display: "flex", gap: 24 }}>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>Privacy</span>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>Terms</span>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>For Organizers</span>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>For Organizers</a>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>How It Works</a>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Privacy</span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Terms</span>
           </div>
         </div>
       </div>

@@ -6,23 +6,27 @@ import {
   daysUntil, formatDate, formatDateRange, formatPrice, getCurrentPricing, getConferenceStatus,
 } from "@/lib/conference-utils";
 
+// ── Category color map (matches homepage) ─────────────────────────────────────
+
+function getCategoryStyle(category) {
+  const map = {
+    "AI / Tech":          { bg: "#EEEDFE", text: "#3C3489" },
+    "Longevity / Health": { bg: "#E1F5EE", text: "#085041" },
+    "SaaS":               { bg: "#E6F1FB", text: "#0C447C" },
+    "Biotech":            { bg: "#FAECE7", text: "#712B13" },
+    "Developer":          { bg: "#FEF7E0", text: "#8B6914" },
+    "Health tech":        { bg: "#FAEEDA", text: "#633806" },
+  };
+  return map[category] || { bg: "#EEEDFE", text: "#3C3489" };
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function VerifiedBadge({ confidence, lastVerified }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <div style={{ width: 8, height: 8, borderRadius: "50%", background: confidence > 0.9 ? "#22c55e" : confidence > 0.8 ? "#f59e0b" : "#ef4444" }} />
-      <span style={{ fontSize: 11, color: "#9ca3af", letterSpacing: 0.3 }}>Verified {lastVerified}</span>
-    </div>
-  );
-}
-
-function DiscountBadge({ code, pct }) {
-  if (!code) return null;
-  return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #f97316, #ea580c)", borderRadius: 6, padding: "5px 10px" }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-      <span style={{ color: "#fff", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>{pct}% OFF</span>
+      <span style={{ fontSize: 11, color: "var(--cc-muted)", letterSpacing: 0.3 }}>Verified {lastVerified}</span>
     </div>
   );
 }
@@ -44,41 +48,41 @@ function ConferenceDetail({ conf, onBack }) {
   const duration = Math.ceil((new Date(conf.end).getTime() - new Date(conf.start).getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const daysAway = daysUntil(conf.start);
   const confStatus = getConferenceStatus(conf.start, conf.end || null);
+  const catStyle = getCategoryStyle(conf.category);
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <button onClick={onBack} style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6, padding: 0, marginBottom: 24, fontFamily: "inherit" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--cc-muted)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6, padding: 0, marginBottom: 24, fontFamily: "inherit" }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Back to results
       </button>
 
       {confStatus.status === "ended" && (
-        <div style={{ background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span style={{ fontSize: 13, color: "#6b7280" }}>This conference has ended. Pricing shown for reference.</span>
+        <div style={{ background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cc-muted)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span style={{ fontSize: 13, color: "var(--cc-body)" }}>This conference has ended. Pricing shown for reference.</span>
         </div>
       )}
 
       {/* Header */}
-      <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: "24px 28px 20px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+      <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "24px 28px 20px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div>
             <span style={{
-              display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase",
-              color: conf.category === "Longevity / Health" ? "#34d399" : "#60a5fa",
-              background: conf.category === "Longevity / Health" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)",
-              padding: "4px 10px", borderRadius: 5, marginBottom: 10,
+              display: "inline-block", fontSize: 11, fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase",
+              color: catStyle.text, background: catStyle.bg,
+              padding: "4px 10px", borderRadius: 6, marginBottom: 10,
             }}>{conf.category}</span>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>{conf.name}</h1>
-            <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>by {conf.organizer}</p>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: "var(--cc-ink)", margin: "0 0 6px 0" }}>{conf.name}</h1>
+            <p style={{ fontSize: 14, color: "var(--cc-muted)", margin: 0 }}>by {conf.organizer}</p>
           </div>
           <VerifiedBadge confidence={conf.confidence} lastVerified={conf.lastVerified} />
         </div>
 
-        <p style={{ fontSize: 15, color: "#374151", lineHeight: 1.6, margin: "16px 0" }}>{conf.description}</p>
+        <p style={{ fontSize: 15, color: "var(--cc-body)", lineHeight: 1.6, margin: "16px 0" }}>{conf.description}</p>
 
         {conf.source_url && (
-          <a href={conf.source_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, fontSize: 14, fontWeight: 600, color: "#f97316", textDecoration: "none" }}>
+          <a href={conf.source_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--cc-gold-dk)", textDecoration: "none" }}>
             Visit Conference Website
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -91,23 +95,23 @@ function ConferenceDetail({ conf, onBack }) {
             { label: "Duration", value: `${duration} days` },
             { label: "Attendees", value: conf.attendees ? conf.attendees.toLocaleString() : "TBA" },
           ].map((item, i) => (
-            <div key={i} style={{ background: "#f9fafb", borderRadius: 10, padding: 12, border: "1px solid #f3f4f6" }}>
-              <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: 14, color: "#111827", fontWeight: 600 }}>{item.value}</div>
-              {item.sub && <div style={{ fontSize: 11, color: item.subColor || "#f97316", marginTop: 2 }}>{item.sub}</div>}
+            <div key={i} style={{ background: "var(--cc-warm-gray)", borderRadius: 10, padding: 12, border: "1px solid rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: 10, color: "var(--cc-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4, fontWeight: 600 }}>{item.label}</div>
+              <div style={{ fontSize: 14, color: "var(--cc-ink)", fontWeight: 600 }}>{item.value}</div>
+              {item.sub && <div style={{ fontSize: 11, color: item.subColor || "var(--cc-gold-dk)", marginTop: 2 }}>{item.sub}</div>}
             </div>
           ))}
         </div>
       </div>
 
       {/* Pricing */}
-      <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: "20px 28px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Pricing</h3>
+      <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "20px 28px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 20px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Pricing</h3>
 
         {(() => {
           const tiers = conf.pricingTiers || [];
           const now = new Date();
-          if (tiers.length === 0) return <div style={{ fontSize: 14, color: "#9ca3af" }}>Pricing not available</div>;
+          if (tiers.length === 0) return <div style={{ fontSize: 14, color: "var(--cc-muted)" }}>Pricing not available</div>;
           const visibleTiers = tiers.filter(t => !t.requires_approval);
           const activeTiers = visibleTiers.filter(t => !t.sold_out && t.price != null && (!t.deadline || new Date(t.deadline) >= now));
           const currentPrice = activeTiers.length > 0 ? Math.min(...activeTiers.map(t => t.price)) : null;
@@ -118,16 +122,16 @@ function ConferenceDetail({ conf, onBack }) {
             const daysLeft = tier.deadline && !deadlinePassed ? daysUntil(tier.deadline) : null;
             const urgent = daysLeft !== null && daysLeft <= 7;
             return (
-              <div key={i} style={{ background: isCurrent ? "rgba(249,115,22,0.06)" : "#f9fafb", border: `1px solid ${isCurrent ? "rgba(249,115,22,0.25)" : "#e5e7eb"}`, borderRadius: 12, padding: "14px 16px", marginBottom: 8, opacity: (tier.sold_out || deadlinePassed) ? 0.5 : 1 }}>
+              <div key={i} style={{ background: isCurrent ? "var(--cc-gold-bg)" : "var(--cc-warm-gray)", border: `1px solid ${isCurrent ? "var(--cc-gold-dk)" : "rgba(0,0,0,0.06)"}`, borderRadius: 12, padding: "14px 16px", marginBottom: 8, opacity: (tier.sold_out || deadlinePassed) ? 0.5 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: isCurrent ? "#f97316" : "#374151", marginBottom: tier.deadline || tier.priceAfterDeadline ? 4 : 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: isCurrent ? "var(--cc-gold-dk)" : "var(--cc-body)", marginBottom: tier.deadline || tier.priceAfterDeadline ? 4 : 0 }}>
                       {tier.label}
                       {tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#ef4444", fontWeight: 700 }}>SOLD OUT</span>}
-                      {tier.requires_approval && !tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "#9ca3af" }}>requires approval</span>}
+                      {tier.requires_approval && !tier.sold_out && <span style={{ marginLeft: 8, fontSize: 11, color: "var(--cc-muted)" }}>requires approval</span>}
                     </div>
                     {tier.deadline && (
-                      <div style={{ fontSize: 11, color: deadlinePassed ? "#9ca3af" : urgent ? "#ef4444" : "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ fontSize: 11, color: deadlinePassed ? "var(--cc-muted)" : urgent ? "#ef4444" : "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         {deadlinePassed
                           ? (tier.isEarlyBird ? `Early bird expired (${formatDate(tier.deadline)})` : `Price increase passed (${formatDate(tier.deadline)})`)
@@ -135,13 +139,13 @@ function ConferenceDetail({ conf, onBack }) {
                       </div>
                     )}
                     {tier.priceAfterDeadline && !deadlinePassed && (
-                      <div style={{ fontSize: 11, color: "#f97316", marginTop: 2 }}>↑ rises to {formatPrice(tier.priceAfterDeadline)} after deadline</div>
+                      <div style={{ fontSize: 11, color: "var(--cc-gold-dk)", marginTop: 2 }}>↑ rises to {formatPrice(tier.priceAfterDeadline)} after deadline</div>
                     )}
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: isCurrent ? "#f97316" : tier.sold_out || deadlinePassed ? "#9ca3af" : "#111827" }}>{formatPrice(tier.price)}</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: isCurrent ? "var(--cc-gold-dk)" : tier.sold_out || deadlinePassed ? "var(--cc-muted)" : "var(--cc-ink)" }}>{formatPrice(tier.price)}</div>
                     {tier.priceAfterDeadline && !deadlinePassed && (
-                      <div style={{ fontSize: 12, color: "#9ca3af", textDecoration: "line-through" }}>{formatPrice(tier.priceAfterDeadline)}</div>
+                      <div style={{ fontSize: 12, color: "var(--cc-muted)", textDecoration: "line-through" }}>{formatPrice(tier.priceAfterDeadline)}</div>
                     )}
                   </div>
                 </div>
@@ -156,17 +160,17 @@ function ConferenceDetail({ conf, onBack }) {
           const withCode = Math.round(p.currentPrice * (1 - conf.discountPct / 100));
           const totalSavings = p.standardPrice - withCode;
           return (
-            <div style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.06), rgba(34,197,94,0.02))", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <div style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "#22c55e", fontWeight: 600, marginBottom: 4 }}>{conf.earlyBird ? "EARLY BIRD + CC CODE" : "WITH CC CODE"}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#22c55e" }}>{formatPrice(withCode)}</div>
-                  <div style={{ fontSize: 11, color: "#6b7280" }}>{conf.earlyBird ? `${formatPrice(conf.earlyBird)} early bird – ${conf.discountPct}% code` : `${formatPrice(conf.price)} – ${conf.discountPct}% code`}</div>
+                  <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginBottom: 4 }}>{conf.earlyBird ? "Early Bird + CC Code" : "With CC Code"}</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "#22c55e" }}>{formatPrice(withCode)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cc-muted)" }}>{conf.earlyBird ? `${formatPrice(conf.earlyBird)} early bird – ${conf.discountPct}% code` : `${formatPrice(conf.price)} – ${conf.discountPct}% code`}</div>
                 </div>
-                <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>TOTAL SAVINGS</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#22c55e" }}>{formatPrice(totalSavings)}</div>
-                  <div style={{ fontSize: 10, color: "#4ade80" }}>{Math.round((1 - withCode / conf.price) * 100)}% off standard</div>
+                <div style={{ background: "#E2F5D6", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#1D6B10", fontWeight: 600, letterSpacing: "0.5px" }}>TOTAL SAVINGS</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1D6B10" }}>{formatPrice(totalSavings)}</div>
+                  <div style={{ fontSize: 10, color: "#1D6B10" }}>{Math.round((1 - withCode / conf.price) * 100)}% off standard</div>
                 </div>
               </div>
             </div>
@@ -175,8 +179,8 @@ function ConferenceDetail({ conf, onBack }) {
 
         {/* Savings waterfall */}
         {(conf.earlyBird || conf.discount) && (() => {
-          const steps = [{ label: "Standard price", amount: conf.price, color: "#94a3b8" }];
-          if (conf.earlyBird) steps.push({ label: "Early bird saves you", amount: -(conf.price - conf.earlyBird), color: "#f97316" });
+          const steps = [{ label: "Standard price", amount: conf.price, color: "var(--cc-muted)" }];
+          if (conf.earlyBird) steps.push({ label: "Early bird saves you", amount: -(conf.price - conf.earlyBird), color: "var(--cc-gold-dk)" });
           if (conf.discount) {
             const base = conf.earlyBird || conf.price;
             steps.push({ label: "CC code saves you", amount: -Math.round(base * conf.discountPct / 100), color: "#22c55e" });
@@ -185,19 +189,19 @@ function ConferenceDetail({ conf, onBack }) {
             ? Math.round((conf.earlyBird || conf.price) * (1 - conf.discountPct / 100))
             : conf.earlyBird || conf.price;
           return (
-            <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, letterSpacing: 0.5, marginBottom: 10, textTransform: "uppercase" }}>Savings Breakdown</div>
+            <div style={{ background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.6px", marginBottom: 10, textTransform: "uppercase" }}>Savings Breakdown</div>
               {steps.map((s, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>{s.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: s.color, fontFamily: "'Space Mono', monospace" }}>
+                  <span style={{ fontSize: 12, color: "var(--cc-body)" }}>{s.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: s.color, fontFamily: "monospace" }}>
                     {s.amount > 0 ? formatPrice(s.amount) : "–" + formatPrice(Math.abs(s.amount))}
                   </span>
                 </div>
               ))}
-              <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, color: "#111827", fontWeight: 700 }}>You pay</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: "#22c55e", fontFamily: "'Space Mono', monospace" }}>{formatPrice(finalPrice)}</span>
+              <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "var(--cc-ink)", fontWeight: 600 }}>You pay</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: "#22c55e", fontFamily: "monospace" }}>{formatPrice(finalPrice)}</span>
               </div>
             </div>
           );
@@ -207,40 +211,40 @@ function ConferenceDetail({ conf, onBack }) {
         {conf.discount && (
           <div style={{ borderRadius: 12, overflow: "hidden" }}>
             {codeState === "locked" && (
-              <div style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.1), rgba(234,88,12,0.05))", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 12, padding: 20, textAlign: "center" }}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316", marginBottom: 4 }}>{conf.discountPct}% OFF</div>
-                <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 14 }}>Exclusive discount available for this conference</div>
-                <div style={{ fontSize: 12, color: "#fb923c", marginBottom: 14 }}>
+              <div style={{ background: "var(--cc-gold-bg)", border: "1px solid var(--cc-gold)", borderRadius: 12, padding: 20, textAlign: "center" }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--cc-gold-dk)", marginBottom: 4 }}>{conf.discountPct}% OFF</div>
+                <div style={{ fontSize: 13, color: "var(--cc-body)", marginBottom: 14 }}>Exclusive discount available for this conference</div>
+                <div style={{ fontSize: 12, color: "var(--cc-gold-dk)", marginBottom: 14 }}>
                   {conf.earlyBird
-                    ? <span>Pay <span style={{ fontWeight: 800, fontSize: 16 }}>{formatPrice(Math.round(conf.earlyBird * (1 - conf.discountPct / 100)))}</span> instead of {formatPrice(conf.earlyBird)}</span>
-                    : <span>Pay <span style={{ fontWeight: 800, fontSize: 16 }}>{formatPrice(Math.round(conf.price * (1 - conf.discountPct / 100)))}</span> instead of {formatPrice(conf.price)}</span>}
+                    ? <span>Pay <span style={{ fontWeight: 700, fontSize: 16 }}>{formatPrice(Math.round(conf.earlyBird * (1 - conf.discountPct / 100)))}</span> instead of {formatPrice(conf.earlyBird)}</span>
+                    : <span>Pay <span style={{ fontWeight: 700, fontSize: 16 }}>{formatPrice(Math.round(conf.price * (1 - conf.discountPct / 100)))}</span> instead of {formatPrice(conf.price)}</span>}
                 </div>
-                <button onClick={handleGetCode} style={{ width: "100%", padding: "14px 24px", borderRadius: 10, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(249,115,22,0.3)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                <button onClick={handleGetCode} style={{ width: "100%", padding: "14px 24px", borderRadius: 10, background: "var(--cc-gold)", border: "none", color: "var(--cc-ink)", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
                   Get Your Code — Free
                 </button>
-                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>Limited codes available</div>
+                <div style={{ fontSize: 11, color: "var(--cc-muted)", marginTop: 8 }}>Limited codes available</div>
               </div>
             )}
             {codeState === "form" && (
-              <div style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.08), rgba(234,88,12,0.03))", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 12, padding: 20, animation: "fadeIn 0.3s ease" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Enter your email to unlock your code</div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>Your code will also be emailed to you for safekeeping.</div>
-                <input type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmitEmail()} style={{ width: "100%", padding: "12px 14px", borderRadius: 8, marginBottom: 12, background: "#f9fafb", border: "1px solid #d1d5db", color: "#111827", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-                <button onClick={handleSubmitEmail} style={{ width: "100%", padding: "12px 24px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: email.includes("@") ? 1 : 0.5 }}>Unlock My Code</button>
-                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 8, textAlign: "center" }}>We'll never spam you. One email with your code, that's it.</div>
+              <div style={{ background: "var(--cc-gold-bg)", border: "1px solid var(--cc-gold)", borderRadius: 12, padding: 20, animation: "fadeIn 0.3s ease" }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 4 }}>Enter your email to unlock your code</div>
+                <div style={{ fontSize: 12, color: "var(--cc-body)", marginBottom: 16 }}>Your code will also be emailed to you for safekeeping.</div>
+                <input type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmitEmail()} style={{ width: "100%", padding: "12px 14px", borderRadius: 8, marginBottom: 12, background: "#fff", border: "1px solid rgba(0,0,0,0.15)", color: "var(--cc-ink)", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+                <button onClick={handleSubmitEmail} style={{ width: "100%", padding: "12px 24px", borderRadius: 10, background: "var(--cc-gold)", border: "none", color: "var(--cc-ink)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: email.includes("@") ? 1 : 0.5 }}>Unlock My Code</button>
+                <div style={{ fontSize: 10, color: "var(--cc-muted)", marginTop: 8, textAlign: "center" }}>We'll never spam you. One email with your code, that's it.</div>
               </div>
             )}
             {codeState === "revealed" && (
-              <div style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", borderRadius: 12, padding: 20, textAlign: "center", animation: "fadeIn 0.3s ease" }}>
-                <div style={{ fontSize: 11, color: "rgba(15,23,42,0.6)", fontWeight: 600, letterSpacing: 1, marginBottom: 6 }}>YOUR EXCLUSIVE CODE</div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: 3, background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "12px 24px", display: "inline-block", fontFamily: "monospace", cursor: "pointer" }} onClick={() => navigator.clipboard?.writeText(revealedCode)}>
+              <div style={{ background: "var(--cc-gold)", borderRadius: 12, padding: 20, textAlign: "center", animation: "fadeIn 0.3s ease" }}>
+                <div style={{ fontSize: 11, color: "var(--cc-gold-dk)", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>YOUR EXCLUSIVE CODE</div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: "var(--cc-ink)", letterSpacing: 3, background: "rgba(0,0,0,0.12)", borderRadius: 8, padding: "12px 24px", display: "inline-block", fontFamily: "monospace", cursor: "pointer" }} onClick={() => navigator.clipboard?.writeText(revealedCode)}>
                   {revealedCode}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" style={{ marginLeft: 10, verticalAlign: "middle" }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cc-ink)" strokeWidth="2" style={{ marginLeft: 10, verticalAlign: "middle", opacity: 0.5 }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                 </div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 10, fontWeight: 600 }}>Save {conf.discountPct}% on your ticket</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Code also sent to {email}</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.15)" }}>Use this code on the conference's registration page at checkout</div>
+                <div style={{ fontSize: 13, color: "var(--cc-ink)", marginTop: 10, fontWeight: 600 }}>Save {conf.discountPct}% on your ticket</div>
+                <div style={{ fontSize: 11, color: "var(--cc-gold-dk)", marginTop: 4 }}>Code also sent to {email}</div>
+                <div style={{ fontSize: 11, color: "var(--cc-gold-dk)", marginTop: 12, padding: "8px 0", borderTop: "1px solid rgba(0,0,0,0.12)" }}>Use this code on the conference's registration page at checkout</div>
               </div>
             )}
           </div>
@@ -249,15 +253,15 @@ function ConferenceDetail({ conf, onBack }) {
 
       {/* Speakers & Tags */}
       {(conf.speakers?.length > 0 || conf.tags?.length > 0) && (
-        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 24, marginTop: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: 24, marginTop: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           {conf.speakers?.length > 0 && (
             <>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Speakers</h3>
+              <h3 style={{ fontSize: 10, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 12px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Speakers</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: conf.tags?.length > 0 ? 20 : 0 }}>
                 {conf.speakers.map((s, i) => (
-                  <span key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 20, padding: "5px 12px 5px 6px" }}>
-                    <span style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `hsl(${i * 60 + 200}, 50%, 50%)`, fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{s.charAt(0)}</span>
-                    <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{s}</span>
+                  <span key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "5px 12px 5px 6px" }}>
+                    <span style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `hsl(${i * 60 + 200}, 40%, 50%)`, fontSize: 11, fontWeight: 600, color: "#fff", flexShrink: 0 }}>{s.charAt(0)}</span>
+                    <span style={{ fontSize: 13, color: "var(--cc-body)", fontWeight: 500 }}>{s}</span>
                   </span>
                 ))}
               </div>
@@ -265,10 +269,10 @@ function ConferenceDetail({ conf, onBack }) {
           )}
           {conf.tags?.length > 0 && (
             <>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", margin: "0 0 12px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Topics</h3>
+              <h3 style={{ fontSize: 10, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 12px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Topics</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {conf.tags.map((t, i) => (
-                  <span key={i} style={{ fontSize: 12, color: "#6b7280", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 12px" }}>{t}</span>
+                  <span key={i} style={{ fontSize: 12, color: "var(--cc-body)", background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 6, padding: "5px 12px" }}>{t}</span>
                 ))}
               </div>
             </>
@@ -278,13 +282,12 @@ function ConferenceDetail({ conf, onBack }) {
 
       {/* Hotels */}
       {conf.hotels && conf.hotels.length > 0 && (
-        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 28, marginTop: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: 28, marginTop: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, letterSpacing: 0.5, textTransform: "uppercase" }}>
-              <span style={{ marginRight: 8 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" style={{ verticalAlign: "middle" }}><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v.01M12 14v.01M16 14v.01M8 18v.01M12 18v.01M16 18v.01"/></svg></span>
+            <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--cc-muted)", margin: 0, letterSpacing: "0.8px", textTransform: "uppercase" }}>
               Official Hotel Partners
             </h3>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>Negotiated conference rates</span>
+            <span style={{ fontSize: 12, color: "var(--cc-muted)" }}>Negotiated conference rates</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: conf.hotels.length > 1 ? "1fr 1fr" : "1fr", gap: 16 }}>
             {conf.hotels.map((hotel, i) => {
@@ -292,42 +295,42 @@ function ConferenceDetail({ conf, onBack }) {
               const savings = (hotel.rackRate - hotel.confRate) * nights;
               const hotelBookDays = daysUntil(hotel.bookBy);
               return (
-                <div key={i} style={{ background: "#f9fafb", borderRadius: 14, padding: 20, border: "1px solid rgba(96,165,250,0.2)" }}>
+                <div key={i} style={{ background: "var(--cc-warm-gray)", borderRadius: 12, padding: 20, border: "1px solid rgba(0,0,0,0.08)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{hotel.name}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 4 }}>{hotel.name}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <div style={{ display: "flex", gap: 2 }}>
                           {Array.from({ length: hotel.stars }).map((_, s) => (
                             <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                           ))}
                         </div>
-                        <span style={{ fontSize: 11, color: "#9ca3af" }}>{hotel.distance}</span>
+                        <span style={{ fontSize: 11, color: "var(--cc-muted)" }}>{hotel.distance}</span>
                       </div>
                     </div>
-                    <div style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 10, color: "#60a5fa", fontWeight: 600, letterSpacing: 0.5 }}>SAVE</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#60a5fa" }}>{formatPrice(savings)}</div>
+                    <div style={{ background: "#E6F1FB", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: "#0C447C", fontWeight: 600, letterSpacing: "0.5px" }}>SAVE</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#0C447C" }}>{formatPrice(savings)}</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginBottom: 2 }}>CONF RATE</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: "#60a5fa" }}>{formatPrice(hotel.confRate)}<span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>/night</span></div>
+                      <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.5px", marginBottom: 2 }}>CONF RATE</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "#0C447C" }}>{formatPrice(hotel.confRate)}<span style={{ fontSize: 12, fontWeight: 400, color: "var(--cc-muted)" }}>/night</span></div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginBottom: 2 }}>RACK RATE</div>
-                      <div style={{ fontSize: 16, color: "#9ca3af", textDecoration: "line-through", marginTop: 4 }}>{formatPrice(hotel.rackRate)}/night</div>
+                      <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.5px", marginBottom: 2 }}>RACK RATE</div>
+                      <div style={{ fontSize: 16, color: "var(--cc-muted)", textDecoration: "line-through", marginTop: 4 }}>{formatPrice(hotel.rackRate)}/night</div>
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
-                    {nights} nights = <span style={{ color: "#60a5fa", fontWeight: 700 }}>{formatPrice(hotel.confRate * nights)} total</span>
-                    <span style={{ color: "#9ca3af" }}> (vs {formatPrice(hotel.rackRate * nights)} rack)</span>
+                  <div style={{ fontSize: 12, color: "var(--cc-body)", marginBottom: 8 }}>
+                    {nights} nights = <span style={{ color: "#0C447C", fontWeight: 700 }}>{formatPrice(hotel.confRate * nights)} total</span>
+                    <span style={{ color: "var(--cc-muted)" }}> (vs {formatPrice(hotel.rackRate * nights)} rack)</span>
                   </div>
                   {hotelBookDays > 0
                     ? <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: hotelBookDays < 14 ? "#ef4444" : "#f59e0b", fontWeight: 600 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Book by {hotel.bookBy} ({hotelBookDays} days left)</div>
                     : <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 600 }}>Block rate expired</div>}
-                  <button style={{ width: "100%", marginTop: 12, padding: "10px 16px", borderRadius: 8, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.3)", color: "#60a5fa", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Hotel →</button>
+                  <button style={{ width: "100%", marginTop: 12, padding: "10px 16px", borderRadius: 8, background: "transparent", border: "1px solid rgba(0,0,0,0.15)", color: "var(--cc-body)", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>Book Hotel →</button>
                 </div>
               );
             })}
@@ -345,25 +348,25 @@ function ConferenceDetail({ conf, onBack }) {
         const totalTrip = ticketWithDiscount + hotelTotal;
         const totalSavings = (conf.price + cheapestHotel.rackRate * nights) - totalTrip;
         return (
-          <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 28, marginTop: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 20px 0", letterSpacing: 0.5, textTransform: "uppercase" }}>Estimated Trip Cost</h3>
+          <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: 28, marginTop: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 20px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Estimated Trip Cost</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto 1fr", gap: 16, alignItems: "center" }}>
-              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, textAlign: "center" }}>
-                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>TICKET{conf.discount ? " (w/ code)" : ""}</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316" }}>{formatPrice(ticketWithDiscount)}</div>
-                {conf.discount && <div style={{ fontSize: 11, color: "#9ca3af", textDecoration: "line-through" }}>{formatPrice(conf.earlyBird || conf.price)}</div>}
+              <div style={{ background: "var(--cc-gold-bg)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: 16, textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.5px", marginBottom: 6 }}>TICKET{conf.discount ? " (w/ code)" : ""}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--cc-gold-dk)" }}>{formatPrice(ticketWithDiscount)}</div>
+                {conf.discount && <div style={{ fontSize: 11, color: "var(--cc-muted)", textDecoration: "line-through" }}>{formatPrice(conf.earlyBird || conf.price)}</div>}
               </div>
-              <div style={{ textAlign: "center", fontSize: 24, color: "#9ca3af", fontWeight: 300 }}>+</div>
-              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, textAlign: "center" }}>
-                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>HOTEL ({nights} nights)</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#60a5fa" }}>{formatPrice(hotelTotal)}</div>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>{cheapestHotel.name}</div>
+              <div style={{ textAlign: "center", fontSize: 24, color: "var(--cc-muted)", fontWeight: 300 }}>+</div>
+              <div style={{ background: "#E6F1FB", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: 16, textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.5px", marginBottom: 6 }}>HOTEL ({nights} nights)</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#0C447C" }}>{formatPrice(hotelTotal)}</div>
+                <div style={{ fontSize: 11, color: "var(--cc-muted)" }}>{cheapestHotel.name}</div>
               </div>
-              <div style={{ textAlign: "center", fontSize: 24, color: "#9ca3af", fontWeight: 300 }}>=</div>
-              <div style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05))", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 12, padding: 16, textAlign: "center" }}>
-                <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600, letterSpacing: 0.5, marginBottom: 6 }}>TOTAL TRIP</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#22c55e" }}>{formatPrice(totalTrip)}</div>
-                <div style={{ fontSize: 11, color: "#4ade80", fontWeight: 600 }}>You save {formatPrice(totalSavings)} via ConferenceCodes</div>
+              <div style={{ textAlign: "center", fontSize: 24, color: "var(--cc-muted)", fontWeight: 300 }}>=</div>
+              <div style={{ background: "#E2F5D6", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 12, padding: 16, textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "#1D6B10", fontWeight: 600, letterSpacing: "0.5px", marginBottom: 6 }}>TOTAL TRIP</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#1D6B10" }}>{formatPrice(totalTrip)}</div>
+                <div style={{ fontSize: 11, color: "#1D6B10", fontWeight: 600 }}>You save {formatPrice(totalSavings)} via ConferenceCodes</div>
               </div>
             </div>
           </div>
@@ -371,14 +374,19 @@ function ConferenceDetail({ conf, onBack }) {
       })()}
 
       {/* CTA */}
-      <div style={{ textAlign: "center", marginTop: 32, display: "flex", gap: 16, justifyContent: "center" }}>
+      <div style={{ textAlign: "center", marginTop: 32, display: "flex", gap: 12, justifyContent: "center" }}>
         {conf.discount && codeState === "locked" && (
-          <button onClick={handleGetCode} style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: "none", padding: "16px 36px", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer", letterSpacing: 0.5, boxShadow: "0 8px 30px rgba(249,115,22,0.3)", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <button onClick={handleGetCode} style={{ background: "var(--cc-gold)", color: "var(--cc-ink)", border: "none", padding: "14px 32px", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Get {conf.discountPct}% Off Code
           </button>
         )}
-        <button style={{ background: conf.discount && codeState !== "locked" ? "rgba(249,115,22,0.1)" : "linear-gradient(135deg, #f97316, #ea580c)", color: conf.discount && codeState !== "locked" ? "#f97316" : "#fff", border: conf.discount && codeState !== "locked" ? "1px solid rgba(249,115,22,0.3)" : "none", padding: "16px 36px", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer", letterSpacing: 0.5, boxShadow: conf.discount && codeState !== "locked" ? "none" : "0 8px 30px rgba(249,115,22,0.3)", fontFamily: "inherit" }}>Book Now →</button>
+        <button style={{
+          background: conf.discount && codeState !== "locked" ? "transparent" : "var(--cc-gold)",
+          color: conf.discount && codeState !== "locked" ? "var(--cc-body)" : "var(--cc-ink)",
+          border: conf.discount && codeState !== "locked" ? "1px solid rgba(0,0,0,0.15)" : "none",
+          padding: "14px 32px", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+        }}>Book Now →</button>
       </div>
     </div>
   );
@@ -389,30 +397,27 @@ function ConferenceDetail({ conf, onBack }) {
 export default function ConferenceDetailClient({ conf }: { conf: any }) {
   const router = useRouter();
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'DM Sans', -apple-system, sans-serif", color: "#111827" }}>
+    <div style={{ minHeight: "100vh", background: "var(--cc-cream)", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: "var(--cc-ink)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Space+Mono:wght@400;700&display=swap');
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         * { box-sizing: border-box; }
-        input:focus { outline: none; border-color: rgba(249,115,22,0.5) !important; }
-        input::placeholder { color: #9ca3af; }
+        input:focus { outline: none; border-color: var(--cc-gold) !important; }
+        input::placeholder { color: var(--cc-muted); }
       `}</style>
 
       {/* Nav */}
-      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 64 }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 15px rgba(249,115,22,0.3)" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>
-              <span style={{ color: "#f1f5f9" }}>Conference</span>
-              <span style={{ color: "#f97316" }}>Codes</span>
+      <div style={{ background: "var(--cc-ink)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
+          <a href="/" style={{ textDecoration: "none" }}>
+            <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>
+              <span style={{ color: "#ffffff" }}>Conference</span>
+              <span style={{ color: "var(--cc-gold)" }}>Codes</span>
             </span>
           </a>
-          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            <a href="/how-it-works" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>How It Works</a>
-            <a href="/for-organizers" style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}>For Organizers</a>
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>How It Works</a>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>For Organizers</a>
           </div>
         </nav>
       </div>
@@ -420,6 +425,19 @@ export default function ConferenceDetailClient({ conf }: { conf: any }) {
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 32px 80px" }}>
         <ConferenceDetail conf={conf} onBack={() => router.back()} />
+      </div>
+
+      {/* Footer */}
+      <div style={{ background: "var(--cc-ink)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>© 2026 ConferenceCodes</span>
+          <div style={{ display: "flex", gap: 24 }}>
+            <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>For Organizers</a>
+            <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>How It Works</a>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Privacy</span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Terms</span>
+          </div>
+        </div>
       </div>
     </div>
   );
