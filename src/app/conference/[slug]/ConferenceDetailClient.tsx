@@ -155,7 +155,7 @@ function ConferenceDetail({ conf, onBack }) {
       <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "20px 28px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <h2 style={{ fontSize: 11, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 16px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Discount Code</h2>
 
-        {conf.discount ? (
+        {conf.hasCode ? (
           <div style={{ borderRadius: 12, overflow: "hidden" }}>
             {codeState === "locked" && (
               <div style={{ background: "var(--cc-gold-bg)", border: "1px solid var(--cc-gold)", borderRadius: 12, padding: 20, textAlign: "center" }}>
@@ -163,7 +163,7 @@ function ConferenceDetail({ conf, onBack }) {
                 <div style={{ fontSize: 13, color: "var(--cc-body)", marginBottom: 14 }}>Exclusive discount available for this conference</div>
                 <button onClick={handleGetCode} style={{ width: "100%", padding: "14px 24px", borderRadius: 10, background: "var(--cc-gold)", border: "none", color: "var(--cc-ink)", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                  Get Your Code, Free
+                  Get Discount Code
                 </button>
               </div>
             )}
@@ -190,7 +190,7 @@ function ConferenceDetail({ conf, onBack }) {
           </div>
         ) : (
           <div style={{ background: "var(--cc-warm-gray)", border: "1px dashed rgba(0,0,0,0.18)", borderRadius: 12, padding: 20, textAlign: "center" }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 4 }}>No discount code available yet</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--cc-muted)", marginBottom: 4 }}>No Discount Code Available</div>
             <div style={{ fontSize: 13, color: "var(--cc-muted)" }}>We are working on securing an exclusive discount for this conference. Check back soon.</div>
           </div>
         )}

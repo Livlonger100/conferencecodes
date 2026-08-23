@@ -32,6 +32,7 @@ export function transformConference(c: any) {
     registration_url: c.registration_url || "",
     discount: c.discount_code || null,
     discountPct: c.discount_pct || 0,
+    hasCode: !!(c.discount_code && String(c.discount_code).trim()) && (c.discount_max_uses == null || (c.discount_uses || 0) < c.discount_max_uses),
     price: highestPrice || lowestPrice || 0,
     earlyBird,
     earlyBirdDeadline,
