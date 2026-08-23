@@ -27,6 +27,15 @@ export const AUTO_APPROVE = false;
 // second human check before it appears on the site.
 export const INGEST_PUBLISH_STATUS = "active";
 
+// When an ingest is flagged "likely incomplete", hold it as a draft (not public)
+// instead of publishing it as trusted. Set false to publish anyway with the
+// honest public-page note below.
+export const HOLD_INCOMPLETE_AS_DRAFT = true;
+
+// A published conference whose confidence is below this shows an honest
+// "pricing may be incomplete" note on its public detail page.
+export const PUBLIC_PRICING_NOTE_BELOW = 0.6;
+
 // Firecrawl endpoint + cost controls. The API key is read from env at call time
 // (FIRECRAWL_API_KEY) and is never stored here.
 export const FIRECRAWL_BASE_URL = "https://api.firecrawl.dev/v2";
