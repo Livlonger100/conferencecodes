@@ -234,3 +234,88 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
   logger.info("discovery.done", result);
   return result;
 }
+
+// One-time (re-runnable) cleanup of EXISTING status='discovered' rows. Applies the
+// same rolling-window rules as insert: past-dated and too-far-out rows are set to
+// 'rejected'; undated rows are kept but flagged for review. Only touches rows that
+// are still 'discovered' - approved / ingested / already-rejected rows are left
+// alone. Pass dryRun to preview counts without writing.
+export async function runDiscoveryCleanup(logger: JobLogger, options: { dryRun?: boolean; now?: Date } = {}) {
+  const dryRun = !!options.dryRun;
+  const now = options.now ?? new Date();
+  const { start: today, end: windowEnd } = discoveryWindow(now);
+
+  const { data, error } = await supabaseAdmin
+    .from("discovery_queue")
+    .select("id, approx_date, notes")
+    .eq("status", "discovered");
+  if (error) {
+    logger.error("cleanup.fetch_failed", { error: error.message });
+    throw new Error(error.message);
+  }
+
+  const scanned = data?.length ?? 0;
+  const pastIds: string[] = [];
+  const farIds: string[] = [];
+  const undatedIds: string[] = [];
+  let keptInWindow = 0;
+
+  for (const row of data ?? []) {
+    const parsed = parseApproxDate(row.approx_date as string | null);
+    if (!parsed) {
+      undatedIds.push(row.id);
+      continue;
+    }
+    if (parsed.latest < today) pastIds.push(row.id);
+    else if (parsed.earliest > windowEnd) farIds.push(row.id);
+    else keptInWindow++;
+  }
+
+  logger.info("cleanup.start", {
+    dryRun,
+    scanned,
+    windowStart: today.toISOString().slice(0, 10),
+    windowEnd: windowEnd.toISOString().slice(0, 10),
+    windowMonths: DISCOVERY_WINDOW_MONTHS,
+    toRejectPast: pastIds.length,
+    toRejectFar: farIds.length,
+    toFlagUndated: undatedIds.length,
+    keptInWindow,
+  });
+
+  if (!dryRun) {
+    const stamp = new Date().toISOString();
+    if (pastIds.length) {
+      await supabaseAdmin
+        .from("discovery_queue")
+        .update({ status: "rejected", notes: "Rejected by cleanup: past-dated", updated_at: stamp })
+        .in("id", pastIds)
+        .eq("status", "discovered");
+    }
+    if (farIds.length) {
+      await supabaseAdmin
+        .from("discovery_queue")
+        .update({ status: "rejected", notes: "Rejected by cleanup: beyond 18-month window", updated_at: stamp })
+        .in("id", farIds)
+        .eq("status", "discovered");
+    }
+    if (undatedIds.length) {
+      await supabaseAdmin
+        .from("discovery_queue")
+        .update({ notes: "No parseable date, please review", updated_at: stamp })
+        .in("id", undatedIds)
+        .eq("status", "discovered");
+    }
+  }
+
+  const result = {
+    scanned,
+    rejectedPast: pastIds.length,
+    rejectedFar: farIds.length,
+    flaggedUndated: undatedIds.length,
+    keptInWindow,
+    dryRun,
+  };
+  logger.info("cleanup.done", result);
+  return result;
+}
