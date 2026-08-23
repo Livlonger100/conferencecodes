@@ -40,6 +40,7 @@ function transformConference(c: any) {
     registration_url: c.registration_url || "",
     discount: c.discount_code || null,
     discountPct: c.discount_pct || 0,
+    hasCode: !!(c.discount_code && String(c.discount_code).trim()) && (c.discount_max_uses == null || (c.discount_uses || 0) < c.discount_max_uses),
     price: highestPrice || lowestPrice || 0,
     earlyBird,
     earlyBirdDeadline,
@@ -277,7 +278,7 @@ function ConferenceCard({ conf }) {
           {formatDateRange(conf.start, conf.end)} · {conf.city}, {conf.country}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-          {(conf.discount || conf.discountPct > 0) && (
+          {conf.hasCode && (
             <span style={{ fontSize: 11, fontWeight: 500, background: "#E2F5D6", color: "#1D6B10", borderRadius: 6, padding: "2px 8px" }}>
               {conf.discountPct > 0 ? `${conf.discountPct}% off` : "Code"}
             </span>
@@ -293,27 +294,48 @@ function ConferenceCard({ conf }) {
         </div>
       </div>
 
-      {/* Get code button */}
+      {/* Discount code CTA: real button only when a code exists */}
       <div style={{ flexShrink: 0 }}>
-        <button
-          onClick={e => { e.stopPropagation(); router.push('/conference/' + conf.slug); }}
-          style={{
-            background: "var(--cc-gold)",
-            color: "var(--cc-ink)",
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 18px",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            whiteSpace: "nowrap",
-            opacity: hovered ? 0.88 : 1,
-            transition: "opacity 0.15s",
-          }}
-        >
-          Get code
-        </button>
+        {conf.hasCode ? (
+          <button
+            onClick={e => { e.stopPropagation(); router.push('/conference/' + conf.slug); }}
+            style={{
+              background: "var(--cc-gold)",
+              color: "var(--cc-ink)",
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 18px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              whiteSpace: "nowrap",
+              opacity: hovered ? 0.88 : 1,
+              transition: "opacity 0.15s",
+            }}
+          >
+            Get Discount Code
+          </button>
+        ) : (
+          <span
+            aria-disabled="true"
+            style={{
+              display: "inline-block",
+              background: "var(--cc-warm-gray)",
+              color: "var(--cc-muted)",
+              border: "1px solid rgba(0,0,0,0.08)",
+              borderRadius: 10,
+              padding: "10px 18px",
+              fontSize: 13,
+              fontWeight: 500,
+              fontFamily: "inherit",
+              whiteSpace: "nowrap",
+              cursor: "default",
+            }}
+          >
+            No Discount Code Available
+          </span>
+        )}
       </div>
     </div>
   );

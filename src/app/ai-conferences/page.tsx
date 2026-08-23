@@ -80,7 +80,7 @@ export default async function AIConferencesPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
                       <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>{conf.name}</h2>
-                      {conf.discount && (
+                      {conf.hasCode && (
                         <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.1)", padding: "3px 8px", borderRadius: 4, whiteSpace: "nowrap" }}>{conf.discountPct}% CODE AVAILABLE</span>
                       )}
                     </div>
