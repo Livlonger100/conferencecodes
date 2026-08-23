@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { checkWorkerAuth } from "@/lib/pipeline/auth";
 import { INGEST_BATCH_SIZE } from "@/lib/pipeline/config";
 import { JobLogger } from "@/lib/pipeline/log";
-import { runTieredExtraction, writeConference } from "@/lib/pipeline/ingest";
+import { runExtraction, writeConference } from "@/lib/pipeline/ingest";
 import type { Candidate } from "@/lib/pipeline/types";
 
 // Ingestion worker (Agent 2). Protected by WORKER_SECRET. Processes only a
@@ -19,13 +19,18 @@ async function handle(req: NextRequest) {
 
   const logger = new JobLogger("ingest");
 
-  // Claim a batch of approved candidates (oldest first).
-  const { data: batch, error } = await supabaseAdmin
+  // Single-candidate test: ?id=<candidate id> processes just that one approved
+  // candidate. Otherwise a small batch of approved candidates (oldest first).
+  const onlyId = new URL(req.url).searchParams.get("id");
+
+  let query = supabaseAdmin
     .from("discovery_queue")
     .select("*")
     .eq("status", "approved")
     .order("created_at", { ascending: true })
-    .limit(INGEST_BATCH_SIZE);
+    .limit(onlyId ? 1 : INGEST_BATCH_SIZE);
+  if (onlyId) query = query.eq("id", onlyId);
+  const { data: batch, error } = await query;
 
   if (error) {
     logger.error("ingest.claim_failed", { error: error.message });
@@ -33,14 +38,14 @@ async function handle(req: NextRequest) {
   }
 
   const candidates = (batch ?? []) as Candidate[];
-  logger.info("ingest.start", { batchSize: candidates.length, limit: INGEST_BATCH_SIZE });
+  logger.info("ingest.start", { batchSize: candidates.length, limit: onlyId ? 1 : INGEST_BATCH_SIZE, onlyId: onlyId ?? null });
 
-  const results: Array<{ id: string; name: string; status: string; tier: string | null; reason?: string }> = [];
+  const results: Array<{ id: string; name: string; status: string; tier: string | null; confidence?: number; likelyIncomplete?: boolean; reason?: string }> = [];
 
   for (const candidate of candidates) {
     logger.info("ingest.item", { id: candidate.id, name: candidate.name, url: candidate.url });
     try {
-      const extraction = await runTieredExtraction(candidate.url, logger);
+      const extraction = await runExtraction(candidate.url, logger);
 
       if (!extraction.ok || !extraction.data) {
         const reason = extraction.errors.join("; ") || "extraction failed";
@@ -55,23 +60,25 @@ async function handle(req: NextRequest) {
 
       const conferenceId = await writeConference(
         extraction.data,
-        { tier: extraction.tier!, sourceCandidate: candidate },
+        { sourceCandidate: candidate, completeness: extraction.completeness! },
         logger
       );
 
+      // Surface the completeness note on the candidate row so it shows in the
+      // /admin/candidates list without any admin UI change.
       await supabaseAdmin
         .from("discovery_queue")
         .update({
           status: "ingested",
           conference_id: conferenceId,
           tier_used: extraction.tier,
-          notes: null,
+          notes: extraction.completeness?.note ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", candidate.id);
 
-      logger.info("ingest.success", { id: candidate.id, conferenceId, tier: extraction.tier });
-      results.push({ id: candidate.id, name: candidate.name, status: "ingested", tier: extraction.tier });
+      logger.info("ingest.success", { id: candidate.id, conferenceId, tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete });
+      results.push({ id: candidate.id, name: candidate.name, status: "ingested", tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete });
     } catch (e: any) {
       const reason = e?.message || "unexpected error";
       await supabaseAdmin

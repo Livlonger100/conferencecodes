@@ -60,9 +60,17 @@ export interface ExtractedConference {
 
 export type IngestTier = "tier1" | "tier2" | "tier3";
 
+// Explainable completeness signal for a pricing extraction.
+export interface Completeness {
+  score: number; // 0..1, stored in conferences.confidence
+  likelyIncomplete: boolean; // true when the page implies more pricing than captured
+  note: string; // short human-readable summary, e.g. "3 tiers, early-bird captured, Firecrawl"
+}
+
 export interface ExtractionResult {
   ok: boolean;
-  tier: IngestTier | null;
+  tier: IngestTier | null; // which method produced the final pricing
   data: ExtractedConference | null;
   errors: string[];
+  completeness: Completeness | null;
 }

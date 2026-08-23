@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { daysUntil, formatDate, formatDateRange, getConferenceStatus } from "@/lib/conference-utils";
+import { PUBLIC_PRICING_NOTE_BELOW } from "@/lib/pipeline/config";
 
 // ── Category color map (label only) ───────────────────────────────────────────
 
@@ -96,6 +97,12 @@ function ConferenceDetail({ conf, onBack }) {
       {/* Pricing tiers */}
       <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "20px 28px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <h2 style={{ fontSize: 11, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 20px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Pricing</h2>
+
+        {conf.confidence != null && conf.confidence < PUBLIC_PRICING_NOTE_BELOW && (
+          <div style={{ background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "var(--cc-body)" }}>
+            Pricing shown may be incomplete. We are still verifying the full list of tiers and deadlines for this conference.
+          </div>
+        )}
 
         {(() => {
           const tiers = conf.pricingTiers || [];
