@@ -9,7 +9,7 @@ export default function ForOrganizers() {
     },
     {
       title: "Verified listings build trust",
-      body: "Every listing on ConferenceCodes is verified against the source. Attendees know our data is accurate — so your listing carries more credibility.",
+      body: "Every listing on ConferenceCodes is verified against the source. Attendees know our data is accurate, so your listing carries more credibility.",
       icon: (
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       ),
@@ -58,7 +58,7 @@ export default function ForOrganizers() {
           <span style={{ color: "#f97316" }}>Fill more seats.</span>
         </h1>
         <p style={{ fontSize: 17, color: "#6b7280", lineHeight: 1.7, margin: 0 }}>
-          ConferenceCodes connects organizers with motivated attendees. Get your event in front of the right people — for free.
+          ConferenceCodes connects organizers with motivated attendees. Get your event in front of the right people, for free.
         </p>
       </div>
 
@@ -84,7 +84,7 @@ export default function ForOrganizers() {
         <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 24, padding: "48px 40px", maxWidth: 560, margin: "0 auto", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <h2 style={{ fontSize: 28, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Get listed today</h2>
           <p style={{ fontSize: 15, color: "#6b7280", margin: "0 0 28px", lineHeight: 1.6 }}>
-            Send us your conference details and we'll get it added to the directory. Basic listings are free — promoted placements available on request.
+            Send us your conference details and we'll get it added to the directory. Basic listings are free, and promoted placements are available on request.
           </p>
           <a
             href="mailto:roger@conferencecodes.com?subject=Organizer%20Partnership"

@@ -14,7 +14,7 @@ export const revalidate = 3600;
 const getConference = cache(async (slug: string) => {
   const { data, error } = await supabaseAdmin
     .from("conferences")
-    .select("*, pricing_tiers(*), hotels(*)")
+    .select("*, pricing_tiers(*)")
     .eq("slug", slug)
     .maybeSingle();
   if (error) console.error("getConference error:", error.message);
@@ -40,7 +40,7 @@ export async function generateMetadata({
   if (!data) return { title: "Conference Not Found | ConferenceCodes" };
 
   const conf = transformConference(data);
-  const title = `${conf.name} ${new Date(conf.start).getFullYear()} — Tickets, Pricing & Discount Codes | ConferenceCodes`;
+  const title = `${conf.name} ${new Date(conf.start).getFullYear()}: Tickets, Pricing & Discount Codes | ConferenceCodes`;
   const description =
     conf.description.length > 155
       ? conf.description.slice(0, 152) + "..."
@@ -51,7 +51,7 @@ export async function generateMetadata({
     title,
     description,
     openGraph: {
-      title: `${conf.name} — Verified Pricing & Exclusive Discount Codes`,
+      title: `${conf.name}: Verified Pricing & Exclusive Discount Codes`,
       description,
       url,
       type: "website",
@@ -59,7 +59,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary",
-      title: `${conf.name} — Discount Codes & Pricing`,
+      title: `${conf.name}: Discount Codes & Pricing`,
       description,
     },
     alternates: { canonical: url },

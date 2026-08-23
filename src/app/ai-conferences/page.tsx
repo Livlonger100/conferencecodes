@@ -5,14 +5,13 @@ import { transformConference, formatDateRange, formatPrice } from "@/lib/confere
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "AI Conference Discount Codes 2026 — Verified Promo Codes | ConferenceCodes",
+  title: "AI Conference Discount Codes 2026: Verified Promo Codes | ConferenceCodes",
   description:
     "Exclusive discount codes for AI and tech conferences in 2026. Verified pricing and promo codes for NVIDIA GTC, Databricks Data+AI Summit, SuperAI, Google Cloud Next, AI Agent Conference, and more.",
 };
 
 const NAV_LINKS = [
   { href: "/ai-conferences", label: "AI Conferences", active: true },
-  { href: "/longevity-conferences", label: "Longevity", active: false },
   { href: "/how-it-works", label: "How It Works", active: false },
   { href: "/for-organizers", label: "For Organizers", active: false },
 ];
@@ -107,7 +106,7 @@ export default async function AIConferencesPage() {
 
         <div style={{ textAlign: "center", marginTop: 48 }}>
           <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 600, color: "#f97316", padding: "12px 28px", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 10, background: "rgba(249,115,22,0.05)" }}>
-            View all conferences including Longevity / Health →
+            View all conferences →
           </a>
         </div>
       </div>

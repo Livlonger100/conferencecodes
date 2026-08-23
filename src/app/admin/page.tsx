@@ -200,7 +200,7 @@ Return this exact structure:
   "name": "Conference Name",
   "organizer": "Organizing Company/Entity",
   "description": "2-3 sentence description of the conference",
-  "category": "Longevity / Health" or "AI / Tech" or "Other",
+  "category": "AI / Tech" or "Other",
   "city": "City",
   "country": "Country",
   "region": "North America" or "Europe" or "Asia" or "Global" or "Other",
@@ -713,7 +713,7 @@ function AdminTool() {
             <div>
               <label style={S.label}>Category</label>
               <select style={S.input} value={form.category} onChange={e => u("category", e.target.value)}>
-                <option>Longevity / Health</option><option>AI / Tech</option><option>Other</option>
+                <option>AI / Tech</option><option>Other</option>
               </select>
             </div>
             <div>
@@ -1173,7 +1173,7 @@ function AdminTool() {
             {/* MANUAL ENTRY */}
             <button onClick={() => {
               setExtractedData({
-                id: `conf_${Date.now()}`, source_url: "", name: "", organizer: "", description: "", category: "Longevity / Health",
+                id: `conf_${Date.now()}`, source_url: "", name: "", organizer: "", description: "", category: "AI / Tech",
                 city: "", country: "", region: "North America", venue: "", start: "", end: "", format: "In-person",
                 pricing: [{ id: "tier_0", tier: "Standard", price: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "all", requires_approval: false, notes: "" }],
                 speakers: [], attendees: null, tags: [], hotels: [], organizer_contact: {},
@@ -1231,7 +1231,6 @@ function AdminTool() {
               <input style={{ ...S.input, flex: 1 }} value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Search conferences..." />
               <select style={{ ...S.input, width: 180 }} value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
                 <option value="all">All Categories</option>
-                <option>Longevity / Health</option>
                 <option>AI / Tech</option>
                 <option>Other</option>
               </select>
@@ -1258,7 +1257,7 @@ function AdminTool() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                         <span style={{ ...S.tag, background: sc.bg, border: `1px solid ${sc.border}`, color: sc.text }}>{conf.status.toUpperCase()}</span>
-                        <span style={{ ...S.tag, background: conf.category.includes("Longevity") ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)", color: conf.category.includes("Longevity") ? "#34d399" : "#60a5fa" }}>{conf.category}</span>
+                        <span style={{ ...S.tag, background: "rgba(96,165,250,0.1)", color: "#60a5fa" }}>{conf.category}</span>
                         {conf.discount_code && (
                           <span style={{ ...S.tag, background: "rgba(249,115,22,0.1)", color: "#f97316" }}>{conf.discount_code} ({conf.discount_pct}% off)</span>
                         )}

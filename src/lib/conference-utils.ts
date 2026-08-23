@@ -49,6 +49,7 @@ export function transformConference(c: any) {
     pricingTiers: tiers.map((t: any) => ({
       label: t.tier_name || "Standard",
       price: t.price != null ? parseFloat(t.price) : null,
+      currency: t.currency || "USD",
       priceAfterDeadline: t.price_after_deadline != null ? parseFloat(t.price_after_deadline) : null,
       deadline: t.deadline || null,
       isTimeWindow: !!t.deadline,

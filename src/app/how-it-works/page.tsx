@@ -3,7 +3,7 @@ export default function HowItWorks() {
     {
       n: "1",
       title: "Find your conference",
-      body: "Browse or search our verified directory of conferences across AI, tech, longevity, and more. Every listing is checked against the source — no ghost events, no stale data.",
+      body: "Browse or search our verified directory of AI and tech conferences worldwide. Every listing is checked against the source, so there are no ghost events and no stale data.",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       ),
@@ -19,7 +19,7 @@ export default function HowItWorks() {
     {
       n: "3",
       title: "Register and save",
-      body: "Head to the conference's registration page and enter your code at checkout. The discount applies instantly — no hoops, no fine print.",
+      body: "Head to the conference's registration page and enter your code at checkout. The discount applies instantly, with no hoops and no fine print.",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       ),

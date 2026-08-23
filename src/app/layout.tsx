@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "ConferenceCodes — Verified Conference Tickets & Exclusive Discount Codes",
+    default: "ConferenceCodes: Verified AI Conference Tickets & Exclusive Discount Codes",
     template: "%s | ConferenceCodes",
   },
   description:
-    "Find verified AI, tech, and longevity conference tickets with exclusive discount codes. Real pricing, early bird deadlines, and negotiated hotel rates — all in one place.",
+    "Find verified AI and tech conference tickets with exclusive discount codes. Real pricing, early bird deadlines, and registration details, all in one place.",
   metadataBase: new URL("https://conferencecodes.com"),
   openGraph: {
     siteName: "ConferenceCodes",
