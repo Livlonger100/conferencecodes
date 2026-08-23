@@ -49,18 +49,43 @@ export type DiscoverySource =
   | { kind: "search"; label: string; query: string; region: string }
   | { kind: "directory"; label: string; url: string; region: string };
 
-const YEAR = 2026;
+// Rolling discovery window: from today through this many months out. Nothing is
+// hardcoded to a calendar year, so the job keeps working as time passes.
+export const DISCOVERY_WINDOW_MONTHS = 18;
 
-export const DISCOVERY_SOURCES: DiscoverySource[] = [
-  { kind: "search", label: "AI conf North America", query: `major AI conferences ${YEAR}`, region: "North America" },
-  { kind: "search", label: "AI conf Europe", query: `AI and machine learning conferences ${YEAR} Europe`, region: "Europe" },
-  { kind: "search", label: "AI conf Asia", query: `artificial intelligence conferences ${YEAR} Asia Singapore Japan India`, region: "Asia" },
-  { kind: "search", label: "AI conf Middle East + Africa", query: `AI summit ${YEAR} Dubai Riyadh Africa`, region: "Middle East / Africa" },
-  { kind: "search", label: "Generative / agentic AI", query: `generative AI and AI agents conference ${YEAR} worldwide`, region: "Global" },
-  { kind: "search", label: "MLOps / applied AI", query: `MLOps and applied machine learning conference ${YEAR}`, region: "Global" },
-  { kind: "directory", label: "tryolabs directory", url: "https://tryolabs.com/blog/machine-learning-deep-learning-conferences", region: "Global" },
-  { kind: "directory", label: "aiconferences.info", url: "https://aiconferences.info", region: "Global" },
-];
+// The window as UTC dates: start = today (midnight), end = start + N months.
+export function discoveryWindow(now: Date = new Date()): { start: Date; end: Date } {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const end = new Date(start);
+  end.setUTCMonth(end.getUTCMonth() + DISCOVERY_WINDOW_MONTHS);
+  return { start, end };
+}
+
+// Space-separated list of every calendar year the window touches, e.g. "2026 2027"
+// (or three years when the window straddles a further boundary). Interpolated into
+// the search queries so results surface upcoming events across the whole window.
+export function discoveryYearsPhrase(now: Date = new Date()): string {
+  const { start, end } = discoveryWindow(now);
+  const years: number[] = [];
+  for (let y = start.getUTCFullYear(); y <= end.getUTCFullYear(); y++) years.push(y);
+  return years.join(" ");
+}
+
+// Search queries interpolate the current window's year(s) at runtime. Regions and
+// source structure are unchanged; only the date/year logic is dynamic now.
+export function getDiscoverySources(now: Date = new Date()): DiscoverySource[] {
+  const YEARS = discoveryYearsPhrase(now);
+  return [
+    { kind: "search", label: "AI conf North America", query: `major AI conferences ${YEARS}`, region: "North America" },
+    { kind: "search", label: "AI conf Europe", query: `AI and machine learning conferences ${YEARS} Europe`, region: "Europe" },
+    { kind: "search", label: "AI conf Asia", query: `artificial intelligence conferences ${YEARS} Asia Singapore Japan India`, region: "Asia" },
+    { kind: "search", label: "AI conf Middle East + Africa", query: `AI summit ${YEARS} Dubai Riyadh Africa`, region: "Middle East / Africa" },
+    { kind: "search", label: "Generative / agentic AI", query: `generative AI and AI agents conference ${YEARS} worldwide`, region: "Global" },
+    { kind: "search", label: "MLOps / applied AI", query: `MLOps and applied machine learning conference ${YEARS}`, region: "Global" },
+    { kind: "directory", label: "tryolabs directory", url: "https://tryolabs.com/blog/machine-learning-deep-learning-conferences", region: "Global" },
+    { kind: "directory", label: "aiconferences.info", url: "https://aiconferences.info", region: "Global" },
+  ];
+}
 
 // ------------------------------------------------------------
 // RECRAWL CADENCE

@@ -1,8 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   AUTO_APPROVE,
-  DISCOVERY_SOURCES,
   DISCOVERY_SOURCES_PER_RUN,
+  DISCOVERY_WINDOW_MONTHS,
+  discoveryWindow,
+  getDiscoverySources,
   type DiscoverySource,
 } from "./config";
 import { callClaude, parseJsonLoose, textFromResponse } from "./claude";
@@ -30,14 +32,60 @@ async function setOffset(offset: number) {
     .upsert({ key: OFFSET_KEY, value: { offset }, updated_at: new Date().toISOString() }, { onConflict: "key" });
 }
 
-function pickSources(offset: number): { batch: DiscoverySource[]; nextOffset: number } {
-  const n = Math.min(DISCOVERY_SOURCES_PER_RUN, DISCOVERY_SOURCES.length);
+function pickSources(offset: number, sources: DiscoverySource[]): { batch: DiscoverySource[]; nextOffset: number } {
+  const n = Math.min(DISCOVERY_SOURCES_PER_RUN, sources.length);
   const batch: DiscoverySource[] = [];
   for (let i = 0; i < n; i++) {
-    batch.push(DISCOVERY_SOURCES[(offset + i) % DISCOVERY_SOURCES.length]);
+    batch.push(sources[(offset + i) % sources.length]);
   }
-  const nextOffset = (offset + n) % DISCOVERY_SOURCES.length;
+  const nextOffset = (offset + n) % sources.length;
   return { batch, nextOffset };
+}
+
+// Best-effort parse of a coarse approx_date string into an earliest/latest date
+// range (UTC). Returns null when nothing usable is found (missing dates are kept
+// and flagged, not dropped). Examples handled: "2026-03-12", "March 15-18, 2026",
+// "October 2026", "2027".
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+function endOfMonthDay(year: number, monthIdx: number): number {
+  return new Date(Date.UTC(year, monthIdx + 1, 0)).getUTCDate();
+}
+
+function parseApproxDate(raw: string | null): { earliest: Date; latest: Date } | null {
+  if (!raw) return null;
+  const s = String(raw).toLowerCase();
+  const yearMatches = s.match(/20\d{2}/g);
+  if (!yearMatches) {
+    const t = Date.parse(raw);
+    if (!Number.isNaN(t)) {
+      const d = new Date(t);
+      return { earliest: d, latest: d };
+    }
+    return null;
+  }
+  const yearStart = parseInt(yearMatches[0], 10);
+  const yearEnd = parseInt(yearMatches[yearMatches.length - 1], 10);
+
+  const monthIdxs: number[] = [];
+  MONTHS.forEach((m, i) => {
+    if (new RegExp(`\\b${m}`).test(s)) monthIdxs.push(i);
+  });
+  if (monthIdxs.length === 0) {
+    // Year only: treat as the whole year so partial-year events are reviewed.
+    return { earliest: new Date(Date.UTC(yearStart, 0, 1)), latest: new Date(Date.UTC(yearEnd, 11, 31)) };
+  }
+  const firstMonth = Math.min(...monthIdxs);
+  const lastMonth = Math.max(...monthIdxs);
+  const dayNums = (s.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/g) || [])
+    .map((x) => parseInt(x, 10))
+    .filter((n) => n >= 1 && n <= 31);
+  const firstDay = dayNums.length ? Math.min(...dayNums) : 1;
+  const lastDay = dayNums.length ? Math.max(...dayNums) : endOfMonthDay(yearEnd, lastMonth);
+  return {
+    earliest: new Date(Date.UTC(yearStart, firstMonth, firstDay)),
+    latest: new Date(Date.UTC(yearEnd, lastMonth, Math.min(lastDay, endOfMonthDay(yearEnd, lastMonth)))),
+  };
 }
 
 const DISCOVERY_SYSTEM = `You find real, upcoming AI / machine learning conferences worldwide for a directory.
@@ -47,6 +95,7 @@ Rules:
 - Only real events you can find, focused on AI / ML / data / generative AI / AI agents.
 - Prefer the official conference website for "url".
 - approx_date can be coarse (e.g. "March 2026") if exact dates are unclear.
+- Only include upcoming events (today or later), ideally within the next 18 months.
 - Do not include pricing. Do not invent events. Return up to 15 items.`;
 
 async function runSource(source: DiscoverySource, logger: JobLogger): Promise<DiscoveredCandidate[]> {
@@ -82,13 +131,22 @@ async function runSource(source: DiscoverySource, logger: JobLogger): Promise<Di
   return out;
 }
 
-export async function runDiscovery(logger: JobLogger) {
+export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolean; now?: Date } = {}) {
+  const dryRun = !!options.dryRun;
+  const now = options.now ?? new Date();
+  const sources = getDiscoverySources(now);
+  const { start: today, end: windowEnd } = discoveryWindow(now);
+
   const offset = await getOffset();
-  const { batch, nextOffset } = pickSources(offset);
+  const { batch, nextOffset } = pickSources(offset, sources);
   logger.info("discovery.start", {
     offset,
+    dryRun,
     sourcesThisRun: batch.map((s) => s.label),
-    totalSources: DISCOVERY_SOURCES.length,
+    totalSources: sources.length,
+    windowStart: today.toISOString().slice(0, 10),
+    windowEnd: windowEnd.toISOString().slice(0, 10),
+    windowMonths: DISCOVERY_WINDOW_MONTHS,
     autoApprove: AUTO_APPROVE,
   });
 
@@ -102,7 +160,7 @@ export async function runDiscovery(logger: JobLogger) {
     }
   }
 
-  // Build rows with dedupe keys; drop in-batch duplicates first.
+  // Dedupe in-batch first.
   const byKey = new Map<string, any>();
   for (const c of found) {
     const dedupe_key = makeDedupeKey({ name: c.name, date: c.approx_date, city: c.city, url: c.url });
@@ -116,14 +174,39 @@ export async function runDiscovery(logger: JobLogger) {
         source: c.source,
         status: AUTO_APPROVE ? "approved" : "discovered",
         dedupe_key,
+        notes: null,
         updated_at: new Date().toISOString(),
       });
     }
   }
-  const rows = [...byKey.values()];
+
+  // Apply the rolling date window: drop past-dated and too-far-out candidates,
+  // keep (and flag) candidates whose date cannot be parsed.
+  const rows: any[] = [];
+  let pastDropped = 0;
+  let tooFarDropped = 0;
+  let undatedFlagged = 0;
+  for (const row of byKey.values()) {
+    const parsed = parseApproxDate(row.approx_date);
+    if (!parsed) {
+      row.notes = "No parseable date, please review";
+      undatedFlagged++;
+      rows.push(row);
+      continue;
+    }
+    if (parsed.latest < today) {
+      pastDropped++;
+      continue;
+    }
+    if (parsed.earliest > windowEnd) {
+      tooFarDropped++;
+      continue;
+    }
+    rows.push(row);
+  }
 
   let inserted = 0;
-  if (rows.length > 0) {
+  if (!dryRun && rows.length > 0) {
     // ignoreDuplicates + unique(dedupe_key) makes re-runs idempotent: existing
     // candidates are skipped, not overwritten.
     const { data, error } = await supabaseAdmin
@@ -134,8 +217,20 @@ export async function runDiscovery(logger: JobLogger) {
     else inserted = data?.length ?? 0;
   }
 
-  await setOffset(nextOffset);
-  logger.info("discovery.done", { candidatesFound: found.length, uniqueThisRun: rows.length, newInserted: inserted, nextOffset });
+  // In a dry run, leave the source rotation offset untouched too.
+  if (!dryRun) await setOffset(nextOffset);
 
-  return { candidatesFound: found.length, uniqueThisRun: rows.length, newInserted: inserted };
+  const result = {
+    candidatesFound: found.length,
+    uniqueThisRun: byKey.size,
+    pastDropped,
+    tooFarDropped,
+    undatedFlagged,
+    keptForInsert: rows.length,
+    newInserted: inserted,
+    dryRun,
+    nextOffset: dryRun ? offset : nextOffset,
+  };
+  logger.info("discovery.done", result);
+  return result;
 }

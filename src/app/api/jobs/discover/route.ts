@@ -13,9 +13,13 @@ async function handle(req: NextRequest) {
   const authError = checkWorkerAuth(req);
   if (authError) return NextResponse.json({ error: authError }, { status: 401 });
 
+  // Dry run (?dryRun=1) runs the full sweep + window filter but writes nothing
+  // and does not advance the source rotation. Use it to verify the date window.
+  const dryRun = new URL(req.url).searchParams.get("dryRun") === "1";
+
   const logger = new JobLogger("discover");
   try {
-    const result = await runDiscovery(logger);
+    const result = await runDiscovery(logger, { dryRun });
     return NextResponse.json({ ok: true, result, log: logger.summary() });
   } catch (e: any) {
     logger.error("discover.fatal", { error: e?.message });
