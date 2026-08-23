@@ -1132,6 +1132,7 @@ function AdminTool() {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => { setView("list"); setEditingConf(null); setExtractedData(null); }} style={view === "list" ? S.btnPrimary : S.btnSecondary}>All Conferences</button>
           <button onClick={() => { setView("add"); setEditingConf(null); setExtractedData(null); setExtractUrl(""); setExtractStatus(""); }} style={view === "add" ? S.btnPrimary : S.btnSecondary}>+ Add New</button>
+          <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Candidates</a>
         </div>
       </div>
 
