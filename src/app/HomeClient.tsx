@@ -941,8 +941,11 @@ export default function HomeClient() {
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
         @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.5; } }
         * { box-sizing: border-box; }
-        input:focus, select:focus { outline: none; border-color: var(--cc-gold) !important; }
-        input::placeholder { color: var(--cc-muted); }
+        #cc-nav { background-color: #1C1B17 !important; }
+        #cc-hero { background-color: #EDBA2A !important; }
+        #cc-footer { background-color: #1C1B17 !important; }
+        input:focus, select:focus { outline: none; border-color: #EDBA2A !important; }
+        input::placeholder { color: #8A8880; }
         select { appearance: none; -webkit-appearance: none; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -962,7 +965,7 @@ export default function HomeClient() {
 
       {!loading && <>
       {/* DARK NAV */}
-      <div style={{ background: "#1C1B17", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div id="cc-nav" style={{ background: "#1C1B17", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
           <a href="/" style={{ textDecoration: "none" }}>
             <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>
@@ -988,7 +991,7 @@ export default function HomeClient() {
       </div>
 
       {/* GOLD HERO BANNER */}
-      <div style={{ background: "#EDBA2A", padding: "48px 32px", position: "relative", overflow: "hidden" }}>
+      <div id="cc-hero" style={{ background: "#EDBA2A", padding: "48px 32px", position: "relative", overflow: "hidden" }}>
         <div style={{
           position: "absolute", top: -80, right: -80,
           width: 280, height: 280, borderRadius: "50%",
@@ -1004,7 +1007,7 @@ export default function HomeClient() {
             fontSize: 32, fontWeight: 600, letterSpacing: "-0.8px",
             color: "#1C1B17", margin: "0 0 10px 0", lineHeight: 1.2,
           }}>
-            Save on the world&apos;s best conferences
+            Discount codes for the world&apos;s best AI conferences
           </h1>
           <p style={{ fontSize: 15, color: "#8B6914", margin: 0, fontWeight: 400 }}>
             {CONFERENCES.length} verified conferences with active discount codes
@@ -1203,7 +1206,7 @@ export default function HomeClient() {
       </div>
 
       {/* DARK FOOTER */}
-      <div style={{ background: "#1C1B17", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+      <div id="cc-footer" style={{ background: "#1C1B17", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>© 2026 ConferenceCodes</span>
           <div style={{ display: "flex", gap: 24 }}>
