@@ -67,10 +67,19 @@ export interface Completeness {
   note: string; // short human-readable summary, e.g. "3 tiers, early-bird captured, Firecrawl"
 }
 
+// Firecrawl call metadata, surfaced in the admin review view.
+export interface ExtractionMeta {
+  pricingMethod: IngestTier;
+  proxyUsed: string; // "basic" | "stealth" | "none"
+  firecrawlCalls: number;
+  stealthUsed: boolean;
+}
+
 export interface ExtractionResult {
   ok: boolean;
   tier: IngestTier | null; // which method produced the final pricing
   data: ExtractedConference | null;
   errors: string[];
   completeness: Completeness | null;
+  meta: ExtractionMeta;
 }
