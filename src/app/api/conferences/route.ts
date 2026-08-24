@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
       price_after_deadline: t.price_after_deadline || null,
       currency: t.currency || "USD",
       deadline: t.deadline || null,
+      early_bird_start: t.early_bird_start || null,
+      early_bird_end: t.early_bird_end || null,
       days_included: t.days_included || "",
       notes: t.notes || "",
       deadline_passed: t.deadline_passed || false,
@@ -43,7 +45,8 @@ export async function POST(req: NextRequest) {
       is_early_bird: t.is_early_bird || false,
       sort_order: i,
     }));
-    await supabaseAdmin.from("pricing_tiers").insert(tiers);
+    const { error: tierErr } = await supabaseAdmin.from("pricing_tiers").insert(tiers);
+    if (tierErr) return NextResponse.json({ error: `pricing tiers insert failed: ${tierErr.message}` }, { status: 500 });
   }
 
   // Insert hotels
@@ -96,6 +99,8 @@ export async function PATCH(req: NextRequest) {
       price_after_deadline: t.price_after_deadline || null,
       currency: t.currency || "USD",
       deadline: t.deadline || null,
+      early_bird_start: t.early_bird_start || null,
+      early_bird_end: t.early_bird_end || null,
       days_included: t.days_included || "",
       notes: t.notes || "",
       deadline_passed: t.deadline_passed || false,
@@ -104,7 +109,8 @@ export async function PATCH(req: NextRequest) {
       is_early_bird: t.is_early_bird || false,
       sort_order: i,
     }));
-    await supabaseAdmin.from("pricing_tiers").insert(tiers);
+    const { error: tierErr } = await supabaseAdmin.from("pricing_tiers").insert(tiers);
+    if (tierErr) return NextResponse.json({ error: `pricing tiers insert failed: ${tierErr.message}` }, { status: 500 });
   }
 
   // Replace hotels

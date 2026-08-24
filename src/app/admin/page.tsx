@@ -58,6 +58,8 @@ function transformConference(c: any) {
       price_after_deadline: t.price_after_deadline != null ? parseFloat(t.price_after_deadline) : null,
       currency: t.currency || "USD",
       deadline: t.deadline || "",
+      early_bird_start: t.early_bird_start || "",
+      early_bird_end: t.early_bird_end || "",
       days_included: t.days_included || "",
       notes: t.notes || "",
       deadline_passed: t.deadline_passed || false,
@@ -122,6 +124,8 @@ function toDbFormat(conf: any) {
       price_after_deadline: t.price_after_deadline || null,
       currency: t.currency || "USD",
       deadline: t.deadline || null,
+      early_bird_start: t.early_bird_start || null,
+      early_bird_end: t.early_bird_end || null,
       days_included: t.days_included || "",
       notes: t.notes || "",
       deadline_passed: t.deadline_passed || false,
@@ -276,292 +280,7 @@ OTHER RULES:
 // ============================================================
 // MAIN APP
 // ============================================================
-function AdminTool() {
-
-  const [conferences, setConferences] = useState([]);
-  const [view, setView] = useState("list"); // list | add | edit | detail
-  const [editingConf, setEditingConf] = useState(null);
-  const [extractUrl, setExtractUrl] = useState("");
-  const [extracting, setExtracting] = useState(false);
-  const [extractStatus, setExtractStatus] = useState("");
-  const [extractedData, setExtractedData] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [searchQ, setSearchQ] = useState("");
-  const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    loadConferencesAsync().then(data => setConferences(data));
-  }, []);
-
-  // Auto-expire conferences
-  useEffect(() => {
-    const expired = conferences.filter(c => c.status === "active" && c.end && c.end < TODAY);
-    if (expired.length > 0) {
-      expired.forEach(c => {
-        fetch("/api/conferences", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: c.id, status: "expired" }),
-        });
-      });
-      setConferences(conferences.map(c => 
-        c.status === "active" && c.end && c.end < TODAY ? { ...c, status: "expired" } : c
-      ));
-    }
-  }, [conferences]);
-
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // ============================================================
-  // EXTRACT FROM URL
-  // ============================================================
-  const handleExtract = async () => {
-    if (!extractUrl.trim()) return;
-    setExtracting(true);
-    setExtractStatus("Fetching conference page...");
-    setExtractedData(null);
-
-    try {
-      setExtractStatus("Sending to Claude for extraction...");
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system: EXTRACTION_SYSTEM,
-          messages: [{
-            role: "user",
-            content: `Extract all conference data from these URLs:\n${extractUrl.trim().split(/[\n,]+/).map((u: string) => u.trim()).filter(Boolean).join("\n")}\n\nCRITICAL INSTRUCTIONS:\n1. Visit EACH URL provided above\n2. ALSO try visiting these common subpages by appending to the base domain: /registration, /register, /pricing, /tickets, /attend, /speakers, /travel, /hotels, /accommodation, /venue, /about, /contact\n3. The PRICING is often NOT on the main page — it is usually on a separate registration or tickets page. You MUST check the registration page.\n4. Look for links containing words like "Register", "Attend", "Tickets", "Pricing", "Book" and follow them.\n5. Return ONLY valid JSON.`
-          }],
-          tools: [{
-            type: "web_search_20250305",
-            name: "web_search"
-          }],
-        }),
-      });
-
-      const data = await response.json();
-      setExtractStatus("Parsing extracted data...");
-
-      // Combine all text blocks
-      const fullText = data.content
-        .map(item => (item.type === "text" ? item.text : ""))
-        .filter(Boolean)
-        .join("\n");
-
-      // Parse JSON from response
-      const clean = fullText.replace(/```json|```/g, "").trim();
-      // Find the JSON object in the response
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in response");
-
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      // Normalize the extracted data into our internal format
-      const urls = extractUrl.trim().split(/[\n,]+/).map(u => u.trim()).filter(Boolean);
-      const normalized = {
-        id: `conf_${Date.now()}`,
-        source_url: urls[0] || extractUrl.trim(),
-        name: parsed.name || "",
-        organizer: parsed.organizer || "",
-        description: parsed.description || "",
-        category: parsed.category || "Other",
-        city: parsed.city || "",
-        country: parsed.country || "",
-        region: parsed.region || "Other",
-        venue: parsed.venue || "",
-        start: parsed.start || "",
-        end: parsed.end || "",
-        format: parsed.format || "In-person",
-        pricing: (parsed.pricing || []).map((p, i) => ({
-          id: `tier_${i}`,
-          tier: p.tier || "Standard",
-          price: p.price === undefined ? null : p.price,
-          currency: p.currency || "USD",
-          deadline: p.deadline || null,
-          deadline_passed: p.deadline_passed || false,
-          days_included: p.days_included || "all",
-          requires_approval: p.requires_approval || false,
-          notes: p.notes || "",
-        })),
-        speakers: parsed.speakers || [],
-        attendees: parsed.attendees || null,
-        tags: parsed.tags || [],
-        hotels: (parsed.hotels || []).map((h, i) => ({
-          id: `hotel_${i}`,
-          name: h.name || "",
-          stars: h.stars || 3,
-          conf_rate: h.conf_rate || 0,
-          rack_rate: h.rack_rate || 0,
-          currency: h.currency || "USD",
-          book_by: h.book_by || "",
-          distance: h.distance || "",
-          booking_url: h.booking_url || "",
-          group_code: h.group_code || "",
-        })),
-        organizer_contact: parsed.organizer_contact || {},
-        discount_code: "",
-        discount_pct: 0,
-        discount_type: "percentage",
-        discount_max_uses: null,
-        discount_uses: 0,
-        status: "draft",
-        extraction_notes: parsed.extraction_notes || "",
-        created_at: new Date().toISOString(),
-        last_verified: new Date().toISOString(),
-        confidence: 0.85,
-      };
-
-      setExtractedData(normalized);
-      setExtractStatus("Extraction complete — review below");
-    } catch (err) {
-      console.error("Extraction error:", err);
-      setExtractStatus(`Error: ${err.message}. You can still create the conference manually.`);
-      // Provide empty template for manual entry
-      setExtractedData({
-        id: `conf_${Date.now()}`,
-        source_url: extractUrl.trim(),
-        name: "", organizer: "", description: "", category: "Other",
-        city: "", country: "", region: "Other", venue: "",
-        start: "", end: "", format: "In-person",
-        pricing: [{ id: "tier_0", tier: "Standard", price: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "all", requires_approval: false, notes: "" }],
-        speakers: [], attendees: null, tags: [],
-        hotels: [], organizer_contact: {},
-        discount_code: "", discount_pct: 0, discount_type: "percentage",
-        discount_max_uses: null, discount_uses: 0,
-        status: "draft", extraction_notes: "Manual entry — extraction failed",
-        created_at: new Date().toISOString(),
-        last_verified: new Date().toISOString(),
-        confidence: 0,
-      });
-    } finally {
-      setExtracting(false);
-    }
-  };
-
-  // ============================================================
-  // SAVE CONFERENCE
-  // ============================================================
-  const [dupeWarning, setDupeWarning] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async (conf, isNew = true) => {
-    // Handle delete from edit view
-    if (conf._delete && conf.id) {
-      setSaving(true);
-      try {
-        await deleteConferenceFromDb(conf.id);
-        const fresh = await loadConferencesAsync();
-        setConferences(fresh);
-        setView("list");
-        setEditingConf(null);
-        showToast(`"${conf.name}" deleted`, "error");
-      } catch (e) {
-        showToast(`Delete failed: ${e.message}`, "error");
-      }
-      setSaving(false);
-      return;
-    }
-    // Duplicate detection for new conferences
-    if (isNew && !dupeWarning) {
-      const dupes = conferences.filter(c => {
-        const nameMatch = c.name && conf.name && c.name.toLowerCase().trim() === conf.name.toLowerCase().trim();
-        const urlMatch = c.source_url && conf.source_url && c.source_url.replace(/\/+$/, "").toLowerCase() === conf.source_url.replace(/\/+$/, "").toLowerCase();
-        const dateMatch = c.start && conf.start && c.start === conf.start;
-        return nameMatch || urlMatch || (dateMatch && c.city && conf.city && c.city.toLowerCase() === conf.city.toLowerCase());
-      });
-      if (dupes.length > 0) {
-        setDupeWarning({ conf, isNew, dupes });
-        return;
-      }
-    }
-    setDupeWarning(null);
-    setSaving(true);
-    try {
-      await saveConferenceToDb(conf, isNew);
-      // Reload from DB to get server-generated fields (id, slug, created_at)
-      const fresh = await loadConferencesAsync();
-      setConferences(fresh);
-      setView("list");
-      setExtractedData(null);
-      setExtractUrl("");
-      setEditingConf(null);
-      showToast(isNew ? `"${conf.name}" saved to database` : `"${conf.name}" updated`);
-    } catch (e) {
-      showToast(`Save failed: ${e.message}`, "error");
-      console.error(e);
-    }
-    setSaving(false);
-  };
-
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-
-  const handleDelete = async (id) => {
-    const conf = conferences.find(c => c.id === id);
-    try {
-      await deleteConferenceFromDb(id);
-      setConferences(conferences.filter(c => c.id !== id));
-      setDeleteConfirmId(null);
-      showToast(`"${conf?.name}" deleted`, "error");
-    } catch (e) {
-      showToast(`Delete failed: ${e.message}`, "error");
-    }
-  };
-
-  // ============================================================
-  // FILTERED LIST
-  // ============================================================
-  const filtered = conferences.filter(c => {
-    if (filterStatus !== "all" && c.status !== filterStatus) return false;
-    if (filterCategory !== "all" && c.category !== filterCategory) return false;
-    if (searchQ) {
-      const q = searchQ.toLowerCase();
-      return `${c.name} ${c.city} ${c.country} ${c.organizer}`.toLowerCase().includes(q);
-    }
-    return true;
-  }).sort((a, b) => {
-    // Most recently added first (by created_at timestamp)
-    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-  });
-
-  const counts = {
-    all: conferences.length,
-    active: conferences.filter(c => c.status === "active").length,
-    draft: conferences.filter(c => c.status === "draft").length,
-    expired: conferences.filter(c => c.status === "expired").length,
-  };
-
-  // ============================================================
-  // STYLES
-  // ============================================================
-  const S = {
-    page: { minHeight: "100vh", background: "#f8f9fa", color: "#374151", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
-    header: { background: "rgba(15,23,42,0.98)", borderBottom: "1px solid rgba(0,0,0,0.2)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 },
-    logo: { display: "flex", alignItems: "center", gap: 10 },
-    logoIcon: { width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(249,115,22,0.3)" },
-    container: { maxWidth: 1100, margin: "0 auto", padding: "24px 32px" },
-    card: { background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 14, padding: 20, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
-    input: { width: "100%", padding: "10px 14px", borderRadius: 8, background: "#ffffff", border: "1px solid #d1d5db", color: "#111827", fontSize: 13, fontFamily: "inherit", outline: "none" },
-    inputSm: { padding: "8px 12px", borderRadius: 6, background: "#ffffff", border: "1px solid #d1d5db", color: "#111827", fontSize: 12, fontFamily: "inherit", outline: "none" },
-    label: { fontSize: 10, color: "#374151", fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4, display: "block" },
-    btnPrimary: { padding: "10px 20px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(249,115,22,0.25)" },
-    btnSecondary: { padding: "10px 20px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
-    btnDanger: { padding: "8px 16px", borderRadius: 6, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
-    btnGhost: { padding: "6px 12px", borderRadius: 6, background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
-    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-    grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 },
-    grid4: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 },
-    tag: { display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 4 },
-    divider: { borderTop: "1px solid #e5e7eb", margin: "16px 0" },
-  };
-
-  // ============================================================
-  // RENDER: CONFERENCE EDITOR FORM
-  // ============================================================
-  const ConferenceForm = ({ initial, onSave, onCancel, isNew, saving }: any) => {
+  const ConferenceForm = ({ initial, onSave, onCancel, isNew, saving, S }: any) => {
     const [form, setForm] = useState(initial);
     const [newSpeaker, setNewSpeaker] = useState("");
     const [newTag, setNewTag] = useState("");
@@ -1080,6 +799,292 @@ function AdminTool() {
     );
   };
 
+function AdminTool() {
+
+  const [conferences, setConferences] = useState([]);
+  const [view, setView] = useState("list"); // list | add | edit | detail
+  const [editingConf, setEditingConf] = useState(null);
+  const [extractUrl, setExtractUrl] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [extractStatus, setExtractStatus] = useState("");
+  const [extractedData, setExtractedData] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [searchQ, setSearchQ] = useState("");
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    loadConferencesAsync().then(data => setConferences(data));
+  }, []);
+
+  // Auto-expire conferences
+  useEffect(() => {
+    const expired = conferences.filter(c => c.status === "active" && c.end && c.end < TODAY);
+    if (expired.length > 0) {
+      expired.forEach(c => {
+        fetch("/api/conferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: c.id, status: "expired" }),
+        });
+      });
+      setConferences(conferences.map(c => 
+        c.status === "active" && c.end && c.end < TODAY ? { ...c, status: "expired" } : c
+      ));
+    }
+  }, [conferences]);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // ============================================================
+  // EXTRACT FROM URL
+  // ============================================================
+  const handleExtract = async () => {
+    if (!extractUrl.trim()) return;
+    setExtracting(true);
+    setExtractStatus("Fetching conference page...");
+    setExtractedData(null);
+
+    try {
+      setExtractStatus("Sending to Claude for extraction...");
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: EXTRACTION_SYSTEM,
+          messages: [{
+            role: "user",
+            content: `Extract all conference data from these URLs:\n${extractUrl.trim().split(/[\n,]+/).map((u: string) => u.trim()).filter(Boolean).join("\n")}\n\nCRITICAL INSTRUCTIONS:\n1. Visit EACH URL provided above\n2. ALSO try visiting these common subpages by appending to the base domain: /registration, /register, /pricing, /tickets, /attend, /speakers, /travel, /hotels, /accommodation, /venue, /about, /contact\n3. The PRICING is often NOT on the main page — it is usually on a separate registration or tickets page. You MUST check the registration page.\n4. Look for links containing words like "Register", "Attend", "Tickets", "Pricing", "Book" and follow them.\n5. Return ONLY valid JSON.`
+          }],
+          tools: [{
+            type: "web_search_20250305",
+            name: "web_search"
+          }],
+        }),
+      });
+
+      const data = await response.json();
+      setExtractStatus("Parsing extracted data...");
+
+      // Combine all text blocks
+      const fullText = data.content
+        .map(item => (item.type === "text" ? item.text : ""))
+        .filter(Boolean)
+        .join("\n");
+
+      // Parse JSON from response
+      const clean = fullText.replace(/```json|```/g, "").trim();
+      // Find the JSON object in the response
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found in response");
+
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Normalize the extracted data into our internal format
+      const urls = extractUrl.trim().split(/[\n,]+/).map(u => u.trim()).filter(Boolean);
+      const normalized = {
+        id: `conf_${Date.now()}`,
+        source_url: urls[0] || extractUrl.trim(),
+        name: parsed.name || "",
+        organizer: parsed.organizer || "",
+        description: parsed.description || "",
+        category: parsed.category || "Other",
+        city: parsed.city || "",
+        country: parsed.country || "",
+        region: parsed.region || "Other",
+        venue: parsed.venue || "",
+        start: parsed.start || "",
+        end: parsed.end || "",
+        format: parsed.format || "In-person",
+        pricing: (parsed.pricing || []).map((p, i) => ({
+          id: `tier_${i}`,
+          tier: p.tier || "Standard",
+          price: p.price === undefined ? null : p.price,
+          currency: p.currency || "USD",
+          deadline: p.deadline || null,
+          deadline_passed: p.deadline_passed || false,
+          days_included: p.days_included || "all",
+          requires_approval: p.requires_approval || false,
+          notes: p.notes || "",
+        })),
+        speakers: parsed.speakers || [],
+        attendees: parsed.attendees || null,
+        tags: parsed.tags || [],
+        hotels: (parsed.hotels || []).map((h, i) => ({
+          id: `hotel_${i}`,
+          name: h.name || "",
+          stars: h.stars || 3,
+          conf_rate: h.conf_rate || 0,
+          rack_rate: h.rack_rate || 0,
+          currency: h.currency || "USD",
+          book_by: h.book_by || "",
+          distance: h.distance || "",
+          booking_url: h.booking_url || "",
+          group_code: h.group_code || "",
+        })),
+        organizer_contact: parsed.organizer_contact || {},
+        discount_code: "",
+        discount_pct: 0,
+        discount_type: "percentage",
+        discount_max_uses: null,
+        discount_uses: 0,
+        status: "draft",
+        extraction_notes: parsed.extraction_notes || "",
+        created_at: new Date().toISOString(),
+        last_verified: new Date().toISOString(),
+        confidence: 0.85,
+      };
+
+      setExtractedData(normalized);
+      setExtractStatus("Extraction complete — review below");
+    } catch (err) {
+      console.error("Extraction error:", err);
+      setExtractStatus(`Error: ${err.message}. You can still create the conference manually.`);
+      // Provide empty template for manual entry
+      setExtractedData({
+        id: `conf_${Date.now()}`,
+        source_url: extractUrl.trim(),
+        name: "", organizer: "", description: "", category: "Other",
+        city: "", country: "", region: "Other", venue: "",
+        start: "", end: "", format: "In-person",
+        pricing: [{ id: "tier_0", tier: "Standard", price: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "all", requires_approval: false, notes: "" }],
+        speakers: [], attendees: null, tags: [],
+        hotels: [], organizer_contact: {},
+        discount_code: "", discount_pct: 0, discount_type: "percentage",
+        discount_max_uses: null, discount_uses: 0,
+        status: "draft", extraction_notes: "Manual entry — extraction failed",
+        created_at: new Date().toISOString(),
+        last_verified: new Date().toISOString(),
+        confidence: 0,
+      });
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  // ============================================================
+  // SAVE CONFERENCE
+  // ============================================================
+  const [dupeWarning, setDupeWarning] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (conf, isNew = true) => {
+    // Handle delete from edit view
+    if (conf._delete && conf.id) {
+      setSaving(true);
+      try {
+        await deleteConferenceFromDb(conf.id);
+        const fresh = await loadConferencesAsync();
+        setConferences(fresh);
+        setView("list");
+        setEditingConf(null);
+        showToast(`"${conf.name}" deleted`, "error");
+      } catch (e) {
+        showToast(`Delete failed: ${e.message}`, "error");
+      }
+      setSaving(false);
+      return;
+    }
+    // Duplicate detection for new conferences
+    if (isNew && !dupeWarning) {
+      const dupes = conferences.filter(c => {
+        const nameMatch = c.name && conf.name && c.name.toLowerCase().trim() === conf.name.toLowerCase().trim();
+        const urlMatch = c.source_url && conf.source_url && c.source_url.replace(/\/+$/, "").toLowerCase() === conf.source_url.replace(/\/+$/, "").toLowerCase();
+        const dateMatch = c.start && conf.start && c.start === conf.start;
+        return nameMatch || urlMatch || (dateMatch && c.city && conf.city && c.city.toLowerCase() === conf.city.toLowerCase());
+      });
+      if (dupes.length > 0) {
+        setDupeWarning({ conf, isNew, dupes });
+        return;
+      }
+    }
+    setDupeWarning(null);
+    setSaving(true);
+    try {
+      await saveConferenceToDb(conf, isNew);
+      // Reload from DB to get server-generated fields (id, slug, created_at)
+      const fresh = await loadConferencesAsync();
+      setConferences(fresh);
+      setView("list");
+      setExtractedData(null);
+      setExtractUrl("");
+      setEditingConf(null);
+      showToast(isNew ? `"${conf.name}" saved to database` : `"${conf.name}" updated`);
+    } catch (e) {
+      showToast(`Save failed: ${e.message}`, "error");
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const handleDelete = async (id) => {
+    const conf = conferences.find(c => c.id === id);
+    try {
+      await deleteConferenceFromDb(id);
+      setConferences(conferences.filter(c => c.id !== id));
+      setDeleteConfirmId(null);
+      showToast(`"${conf?.name}" deleted`, "error");
+    } catch (e) {
+      showToast(`Delete failed: ${e.message}`, "error");
+    }
+  };
+
+  // ============================================================
+  // FILTERED LIST
+  // ============================================================
+  const filtered = conferences.filter(c => {
+    if (filterStatus !== "all" && c.status !== filterStatus) return false;
+    if (filterCategory !== "all" && c.category !== filterCategory) return false;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      return `${c.name} ${c.city} ${c.country} ${c.organizer}`.toLowerCase().includes(q);
+    }
+    return true;
+  }).sort((a, b) => {
+    // Most recently added first (by created_at timestamp)
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+
+  const counts = {
+    all: conferences.length,
+    active: conferences.filter(c => c.status === "active").length,
+    draft: conferences.filter(c => c.status === "draft").length,
+    expired: conferences.filter(c => c.status === "expired").length,
+  };
+
+  // ============================================================
+  // STYLES
+  // ============================================================
+  const S = {
+    page: { minHeight: "100vh", background: "#f8f9fa", color: "#374151", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
+    header: { background: "rgba(15,23,42,0.98)", borderBottom: "1px solid rgba(0,0,0,0.2)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 },
+    logo: { display: "flex", alignItems: "center", gap: 10 },
+    logoIcon: { width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(249,115,22,0.3)" },
+    container: { maxWidth: 1100, margin: "0 auto", padding: "24px 32px" },
+    card: { background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 14, padding: 20, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
+    input: { width: "100%", padding: "10px 14px", borderRadius: 8, background: "#ffffff", border: "1px solid #d1d5db", color: "#111827", fontSize: 13, fontFamily: "inherit", outline: "none" },
+    inputSm: { padding: "8px 12px", borderRadius: 6, background: "#ffffff", border: "1px solid #d1d5db", color: "#111827", fontSize: 12, fontFamily: "inherit", outline: "none" },
+    label: { fontSize: 10, color: "#374151", fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4, display: "block" },
+    btnPrimary: { padding: "10px 20px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(249,115,22,0.25)" },
+    btnSecondary: { padding: "10px 20px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+    btnDanger: { padding: "8px 16px", borderRadius: 6, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+    btnGhost: { padding: "6px 12px", borderRadius: 6, background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
+    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
+    grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 },
+    grid4: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 },
+    tag: { display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 4 },
+    divider: { borderTop: "1px solid #e5e7eb", margin: "16px 0" },
+  };
+
+  // ============================================================
+  // RENDER: CONFERENCE EDITOR FORM
+  // ============================================================
+
   // ============================================================
   // RENDER
   // ============================================================
@@ -1196,6 +1201,7 @@ function AdminTool() {
             onCancel={() => { setExtractedData(null); setExtractUrl(""); setExtractStatus(""); }}
             isNew={true}
             saving={saving}
+            S={S}
           />
         )}
 
@@ -1206,6 +1212,7 @@ function AdminTool() {
             onCancel={() => { setView("list"); setEditingConf(null); }}
             isNew={false}
             saving={saving}
+            S={S}
           />
         )}
 
