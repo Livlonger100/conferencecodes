@@ -1,8 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import {
+  DISCOVERY_WINDOW_MONTHS,
   FIRECRAWL_ESCALATE_TO_STEALTH,
   INGEST_BATCH_SIZE,
   PIPELINE_CATEGORY,
+  discoveryWindow,
   nextRecrawlDays,
 } from "./config";
 import { callClaude, parseJsonLoose, textFromResponse } from "./claude";
@@ -173,6 +175,36 @@ function toIsoDateOrNull(d: string | null): string | null {
   return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10);
 }
 
+// Apply the SAME rolling window discovery uses (today .. +DISCOVERY_WINDOW_MONTHS)
+// to the ingested real dates, so past-dated and far-future scrapes cannot become
+// publishable drafts. Returns which bucket the event falls in.
+function dateWindowStatus(startIso: string | null, endIso: string | null): "in_window" | "past" | "out_of_window" {
+  const start = toIsoDateOrNull(startIso);
+  const end = toIsoDateOrNull(endIso) || start;
+  if (!start || !end) return "in_window"; // no usable dates; leave to normal review
+  const { start: windowStart, end: windowEnd } = discoveryWindow();
+  const eventEnd = Date.parse(end);
+  const eventStart = Date.parse(start);
+  if (eventEnd < windowStart.getTime()) return "past";
+  if (eventStart > windowEnd.getTime()) return "out_of_window";
+  return "in_window";
+}
+
+// Map an extracted country to one of the admin Region options, so a Singapore
+// event is not left at the default "North America". Falls back to "Other".
+function regionFromCountry(country: string | null | undefined): string {
+  const c = (country || "").toLowerCase().trim();
+  if (!c) return "Other";
+  const NA = ["united states", "usa", "us", "u.s.", "u.s.a.", "america", "canada", "mexico"];
+  const EU = ["united kingdom", "uk", "u.k.", "england", "scotland", "wales", "ireland", "france", "germany", "spain", "portugal", "italy", "netherlands", "the netherlands", "holland", "switzerland", "sweden", "norway", "denmark", "finland", "iceland", "poland", "austria", "belgium", "czech republic", "czechia", "greece", "hungary", "romania", "bulgaria", "croatia", "slovenia", "slovakia", "estonia", "latvia", "lithuania", "luxembourg", "malta", "cyprus"];
+  const ASIA = ["singapore", "japan", "china", "india", "south korea", "korea", "north korea", "hong kong", "taiwan", "thailand", "vietnam", "viet nam", "malaysia", "indonesia", "philippines", "pakistan", "bangladesh", "sri lanka", "nepal", "cambodia", "laos", "myanmar", "brunei", "mongolia", "kazakhstan"];
+  const match = (list: string[]) => list.some((x) => c === x || c.includes(x));
+  if (match(NA)) return "North America";
+  if (match(EU)) return "Europe";
+  if (match(ASIA)) return "Asia";
+  return "Other";
+}
+
 function computeNextRecrawl(data: ExtractedConference): string {
   const now = Date.now();
   const dayMs = 86400000;
@@ -195,11 +227,19 @@ export async function writeConference(
   logger: JobLogger
 ): Promise<string> {
   const nextRecrawl = computeNextRecrawl(data);
-  // Scraped data is never trusted by default: every ingested listing is saved as
-  // DRAFT regardless of confidence. It only goes public when a human approves it
-  // in the admin review view. Confidence and the completeness note are kept as
-  // review signals, not as a publish gate.
-  const status = "draft";
+  // Scraped data is never trusted by default: in-window listings are saved as
+  // DRAFT regardless of confidence and only go public when a human approves them.
+  // Date-window enforcement (same rule discovery uses): a past-dated event is
+  // held as EXPIRED and a far-future one as ARCHIVED, so neither can be
+  // accidentally published or appear in the normal draft review list.
+  const window = dateWindowStatus(data.start_date, data.end_date);
+  const status = window === "past" ? "expired" : window === "out_of_window" ? "archived" : "draft";
+  const dateNote =
+    window === "past"
+      ? " | DATE: event date is in the past, held as expired (not publishable)"
+      : window === "out_of_window"
+      ? ` | DATE: starts beyond the ${DISCOVERY_WINDOW_MONTHS}-month window, held as archived (not publishable)`
+      : "";
   const fcSummary = `Firecrawl ${meta.extraction.firecrawlCalls} call${meta.extraction.firecrawlCalls === 1 ? "" : "s"}${meta.extraction.stealthUsed ? ", stealth" : ""}`;
   const confRow: Record<string, unknown> = {
     name: data.title,
@@ -211,12 +251,14 @@ export async function writeConference(
     end_date: toIsoDateOrNull(data.end_date),
     city: data.city,
     country: data.country,
+    region: regionFromCountry(data.country),
     source_url: data.official_url,
     registration_url: data.official_url,
-    extraction_notes: `${meta.completeness.note} | pricing: ${fcSummary} | candidate ${meta.sourceCandidate.id}`,
+    extraction_notes: `${meta.completeness.note} | pricing: ${fcSummary}${dateNote} | candidate ${meta.sourceCandidate.id}`,
     next_recrawl_at: nextRecrawl,
     updated_at: new Date().toISOString(),
   };
+  logger.info("conference.date_window", { name: data.title, window, status });
   logger.info("conference.completeness", { name: data.title, confidence: meta.completeness.score, likelyIncomplete: meta.completeness.likelyIncomplete, status });
 
   // Dedupe against existing conferences by official/source URL.
