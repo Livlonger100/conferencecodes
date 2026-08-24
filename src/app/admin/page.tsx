@@ -1160,6 +1160,7 @@ function AdminTool() {
           <button onClick={() => { setView("list"); setEditingConf(null); setExtractedData(null); }} style={view === "list" ? S.btnPrimary : S.btnSecondary}>All Conferences</button>
           <button onClick={() => { setView("add"); setEditingConf(null); setExtractedData(null); setExtractUrl(""); setExtractStatus(""); }} style={view === "add" ? S.btnPrimary : S.btnSecondary}>+ Add New</button>
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Candidates</a>
+          <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Bulk Import</a>
         </div>
       </div>
 

@@ -29,7 +29,9 @@ function normalizeDatePart(date: string | null | undefined): string {
   return "nodate";
 }
 
-function domainOf(url: string | null | undefined): string {
+// Normalized registrable host (lowercased, no leading www). Shared by the
+// dedupe key and by the bulk URL importer so both dedupe on the same domain.
+export function normalizeDomain(url: string | null | undefined): string {
   if (!url) return "nourl";
   try {
     const u = new URL(url.startsWith("http") ? url : `https://${url}`);
@@ -49,7 +51,7 @@ export function makeDedupeKey(input: {
     normalizeText(input.name).replace(/\s+/g, "-"),
     normalizeDatePart(input.date),
     normalizeText(input.city).replace(/\s+/g, "-") || "nocity",
-    domainOf(input.url),
+    normalizeDomain(input.url),
   ];
   return parts.join("|");
 }
