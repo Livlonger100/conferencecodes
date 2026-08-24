@@ -85,6 +85,7 @@ function CandidatesTool() {
         <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Conference<span style={{ color: "#f97316" }}>Codes</span> · Candidates</span>
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
+          <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Bulk Import</a>
           <button style={{ ...S.btnSecondary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("discover")}>{running === "discover" ? "Running..." : "Run discovery"}</button>
           <button style={{ ...S.btnPrimary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("ingest")}>{running === "ingest" ? "Running..." : "Run ingestion"}</button>
         </div>
