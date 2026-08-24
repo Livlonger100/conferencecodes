@@ -34,11 +34,19 @@ export default async function AIConferencesPage() {
         a { text-decoration: none; }
         .conf-card:hover { border-color: rgba(96,165,250,0.4) !important; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.08) !important; }
         .conf-card { transition: all 0.2s ease; }
+        @media (max-width: 640px) {
+          .aic-nav { flex-wrap: wrap !important; height: auto !important; padding: 10px 16px !important; row-gap: 8px !important; }
+          .aic-nav-links { flex-basis: 100% !important; justify-content: flex-start !important; gap: 10px 16px !important; flex-wrap: wrap !important; }
+          .aic-nav-links a { padding-top: 6px !important; padding-bottom: 6px !important; }
+          .aic-card-row { flex-direction: column !important; gap: 12px !important; }
+          .aic-card-cta { text-align: left !important; }
+          .aic-hero-title { font-size: 28px !important; }
+        }
       `}</style>
 
       {/* Nav */}
       <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 64 }}>
+        <nav className="aic-nav" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 64 }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 15px rgba(249,115,22,0.3)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -47,7 +55,7 @@ export default async function AIConferencesPage() {
               <span style={{ color: "#f1f5f9" }}>Conference</span><span style={{ color: "#f97316" }}>Codes</span>
             </span>
           </a>
-          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+          <div className="aic-nav-links" style={{ display: "flex", gap: 24, alignItems: "center" }}>
             {NAV_LINKS.map(l => (
               <a key={l.href} href={l.href} style={{ fontSize: 13, color: l.active ? "#f97316" : "#cbd5e1", fontWeight: l.active ? 700 : 400 }}>{l.label}</a>
             ))}
@@ -59,7 +67,7 @@ export default async function AIConferencesPage() {
       <div style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", padding: "40px 32px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: "#60a5fa", background: "rgba(96,165,250,0.1)", padding: "4px 10px", borderRadius: 5, marginBottom: 14 }}>AI / Tech</span>
-          <h1 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px 0", lineHeight: 1.2 }}>
+          <h1 className="aic-hero-title" style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px 0", lineHeight: 1.2 }}>
             AI Conference Discount Codes 2026
           </h1>
           <p style={{ fontSize: 16, color: "#6b7280", margin: "0 0 20px 0", maxWidth: 600, lineHeight: 1.6 }}>
@@ -76,7 +84,7 @@ export default async function AIConferencesPage() {
             const price = conf.earlyBird ?? conf.price;
             return (
               <a key={conf.id} href={`/conference/${conf.slug}`} className="conf-card" style={{ display: "block", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24 }}>
+                <div className="aic-card-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
                       <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>{conf.name}</h2>
@@ -89,7 +97,7 @@ export default async function AIConferencesPage() {
                     </div>
                     <p style={{ fontSize: 14, color: "#374151", margin: 0, lineHeight: 1.5 }}>{conf.description}</p>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div className="aic-card-cta" style={{ textAlign: "right", flexShrink: 0 }}>
                     {price > 0 && (
                       <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316", marginBottom: 4 }}>{formatPrice(price)}</div>
                     )}

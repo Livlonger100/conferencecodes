@@ -241,6 +241,7 @@ function ConferenceCard({ conf }) {
 
   return (
     <div
+      className="cc-card"
       onClick={() => router.push('/conference/' + conf.slug)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -271,7 +272,7 @@ function ConferenceCard({ conf }) {
 
       {/* Info */}
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 4, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="cc-card-title" style={{ fontSize: 16, fontWeight: 600, color: "var(--cc-ink)", marginBottom: 4, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {conf.name}
         </div>
         <div style={{ fontSize: 12, color: "var(--cc-muted)", marginBottom: 8 }}>
@@ -295,7 +296,7 @@ function ConferenceCard({ conf }) {
       </div>
 
       {/* Discount code CTA: real button only when a code exists */}
-      <div style={{ flexShrink: 0 }}>
+      <div className="cc-card-cta" style={{ flexShrink: 0 }}>
         {conf.hasCode ? (
           <button
             onClick={e => { e.stopPropagation(); router.push('/conference/' + conf.slug); }}
@@ -481,6 +482,22 @@ export default function HomeClient() {
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(138,136,128,0.4); border-radius: 3px; }
+
+        /* Mobile / narrow screens. Desktop layout is unchanged above this. */
+        @media (max-width: 640px) {
+          .cc-nav { flex-wrap: wrap !important; height: auto !important; padding: 10px 16px !important; row-gap: 8px !important; }
+          .cc-nav-links { flex-basis: 100% !important; justify-content: flex-start !important; gap: 10px 18px !important; flex-wrap: wrap !important; }
+          .cc-nav-links a, .cc-nav-links button { padding-top: 6px !important; padding-bottom: 6px !important; }
+          #cc-hero { padding: 32px 20px !important; }
+          .cc-hero-title { font-size: 24px !important; }
+          .cc-container { padding-left: 16px !important; padding-right: 16px !important; }
+          .cc-row-wrap { flex-wrap: wrap !important; gap: 10px !important; }
+          .cc-filter-grid { grid-template-columns: 1fr !important; }
+          .cc-card { grid-template-columns: 80px 1fr !important; align-items: start !important; }
+          .cc-card-title { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+          .cc-card-cta { grid-column: 1 / -1 !important; margin-top: 6px !important; }
+          .cc-card-cta > button, .cc-card-cta > span { width: 100% !important; text-align: center !important; min-height: 44px !important; display: flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important; }
+        }
       `}</style>
 
       {loading && (
@@ -497,14 +514,14 @@ export default function HomeClient() {
       {!loading && <>
       {/* DARK NAV */}
       <div id="cc-nav" style={{ background: "#1C1B17", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
+        <nav className="cc-nav" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 60 }}>
           <a href="/" style={{ textDecoration: "none" }}>
             <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>
               <span style={{ color: "#ffffff" }}>Conference</span>
               <span style={{ color: "var(--cc-gold)" }}>Codes</span>
             </span>
           </a>
-          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+          <div className="cc-nav-links" style={{ display: "flex", gap: 28, alignItems: "center" }}>
             <a href="/ai-conferences" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>AI Conferences</a>
             <a href="/how-it-works" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>How It Works</a>
             <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>For Organizers</a>
@@ -533,7 +550,7 @@ export default function HomeClient() {
           background: "rgba(255,255,255,0.12)", pointerEvents: "none",
         }} />
         <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center", position: "relative" }}>
-          <h1 style={{
+          <h1 className="cc-hero-title" style={{
             fontSize: 32, fontWeight: 600, letterSpacing: "-0.8px",
             color: "#1C1B17", margin: "0 0 10px 0", lineHeight: 1.2,
           }}>
@@ -547,7 +564,7 @@ export default function HomeClient() {
 
       {/* SEARCH & FILTER PANEL */}
       <div style={{ background: "#ffffff", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px" }}>
+        <div className="cc-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px" }}>
           {/* Search bar */}
           <div style={{ position: "relative", marginBottom: 16 }}>
             <svg style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cc-muted)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -573,7 +590,7 @@ export default function HomeClient() {
           </div>
 
           {/* 3-column filter grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div className="cc-filter-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             <div>
               <div style={{ fontSize: 10, color: "var(--cc-muted)", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Date from</div>
               <input
@@ -652,7 +669,7 @@ export default function HomeClient() {
 
       {/* RESULTS BAR */}
       <div style={{ background: "var(--cc-warm-gray)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="cc-container cc-row-wrap" style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: "var(--cc-body)" }}>
             Showing <span style={{ color: "var(--cc-ink)", fontWeight: 600 }}>{filtered.length}</span> conferences with active codes
           </span>
@@ -677,7 +694,7 @@ export default function HomeClient() {
 
       {/* CONFERENCE LISTING */}
       <div style={{ background: "var(--cc-cream)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 32px 80px" }}>
+        <div className="cc-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 32px 80px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {sortedFiltered.slice(0, visibleCount).map((conf, i) => (
               <div key={conf.id} style={{ animation: `fadeIn ${0.1 + i * 0.04}s ease` }}>
@@ -716,7 +733,7 @@ export default function HomeClient() {
 
       {/* DARK FOOTER */}
       <div id="cc-footer" style={{ background: "#1C1B17", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="cc-container cc-row-wrap" style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>© 2026 ConferenceCodes</span>
           <div style={{ display: "flex", gap: 24 }}>
             <a href="/for-organizers" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>For Organizers</a>
