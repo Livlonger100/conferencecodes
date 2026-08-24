@@ -554,10 +554,10 @@ export default function HomeClient() {
             fontSize: 32, fontWeight: 600, letterSpacing: "-0.8px",
             color: "#1C1B17", margin: "0 0 10px 0", lineHeight: 1.2,
           }}>
-            Discount codes for the world&apos;s best AI conferences
+            Discover, compare, and save on AI conferences worldwide
           </h1>
           <p style={{ fontSize: 15, color: "#8B6914", margin: 0, fontWeight: 400 }}>
-            {CONFERENCES.length} verified conferences with active discount codes
+            Browse verified AI conferences worldwide by topic, date, location, and price. Exclusive discount codes when available.
           </p>
         </div>
       </div>
@@ -569,7 +569,7 @@ export default function HomeClient() {
           <div style={{ position: "relative", marginBottom: 16 }}>
             <svg style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cc-muted)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input
-              type="text" placeholder="Search conferences, speakers, topics..."
+              type="text" placeholder="Search AI conferences by name, topic, or city"
               value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               style={{
@@ -671,7 +671,7 @@ export default function HomeClient() {
       <div style={{ background: "var(--cc-warm-gray)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="cc-container cc-row-wrap" style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: "var(--cc-body)" }}>
-            Showing <span style={{ color: "var(--cc-ink)", fontWeight: 600 }}>{filtered.length}</span> conferences with active codes
+            Showing <span style={{ color: "var(--cc-ink)", fontWeight: 600 }}>{filtered.length}</span> AI conferences
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 11, color: "var(--cc-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.6px" }}>Sort</span>
@@ -733,6 +733,11 @@ export default function HomeClient() {
 
       {/* DARK FOOTER */}
       <div id="cc-footer" style={{ background: "#1C1B17", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="cc-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 32px 0" }}>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", margin: 0, lineHeight: 1.6, maxWidth: 640 }}>
+            Organizers: list your conference free and reach motivated attendees. Offer trackable discount codes to fill more seats.
+          </p>
+        </div>
         <div className="cc-container cc-row-wrap" style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>© 2026 ConferenceCodes</span>
           <div style={{ display: "flex", gap: 24 }}>
