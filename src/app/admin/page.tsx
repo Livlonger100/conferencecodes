@@ -1,12 +1,44 @@
 // @ts-nocheck
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 
 // ============================================================
 // ConferenceCodes Admin Tool — Next.js + Supabase
 // ============================================================
 
 const TODAY = new Date().toISOString().split("T")[0];
+
+// Region is auto-derived from country (kept in the background, not shown in the form).
+function regionFromCountry(country) {
+  const c = (country || "").toLowerCase().trim();
+  if (!c) return "Other";
+  const NA = ["united states", "usa", "us", "u.s.", "u.s.a.", "america", "canada", "mexico"];
+  const EU = ["united kingdom", "uk", "u.k.", "england", "scotland", "wales", "ireland", "france", "germany", "spain", "portugal", "italy", "netherlands", "the netherlands", "holland", "switzerland", "sweden", "norway", "denmark", "finland", "iceland", "poland", "austria", "belgium", "czech republic", "czechia", "greece", "hungary", "romania"];
+  const ASIA = ["singapore", "japan", "china", "india", "south korea", "korea", "hong kong", "taiwan", "thailand", "vietnam", "malaysia", "indonesia", "philippines", "pakistan", "bangladesh", "sri lanka", "nepal", "mongolia", "kazakhstan"];
+  const has = (list) => list.some((x) => c === x || c.includes(x));
+  if (has(NA)) return "North America";
+  if (has(EU)) return "Europe";
+  if (has(ASIA)) return "Asia";
+  return "Other";
+}
+
+// Money formatting for no-spinner price inputs: store a plain number, show it
+// formatted with the tier currency (whole amounts, no decimals).
+const CUR_SYMBOL = { USD: "$", EUR: "€", GBP: "£", JPY: "¥", INR: "₹", AUD: "A$", CAD: "C$", SGD: "S$", NZD: "NZ$", HKD: "HK$", CHF: "CHF ", AED: "AED ", ZAR: "R", BRL: "R$", CNY: "¥", KRW: "₩", MXN: "MX$", SEK: "kr ", NOK: "kr ", DKK: "kr " };
+function fmtMoney(n, cur) {
+  if (n == null || n === "") return "";
+  const num = Number(n);
+  if (Number.isNaN(num)) return "";
+  return (CUR_SYMBOL[cur] || "") + num.toLocaleString("en-US");
+}
+function parseMoney(s) {
+  const digits = String(s).replace(/[^0-9]/g, "");
+  return digits === "" ? null : parseInt(digits, 10);
+}
+function parseIntOrNull(s) {
+  const digits = String(s).replace(/[^0-9]/g, "");
+  return digits === "" ? null : parseInt(digits, 10);
+}
 
 // Transform DB row to admin tool format
 function transformConference(c: any) {
@@ -94,7 +126,7 @@ function toDbFormat(conf: any) {
     end_date: conf.end || null,
     city: conf.city,
     country: conf.country,
-    region: conf.region,
+    region: regionFromCountry(conf.country) || conf.region,
     venue: conf.venue,
     attendees: conf.attendees ? parseInt(conf.attendees) : null,
     confidence: conf.confidence ? parseFloat(conf.confidence) : null,
@@ -282,12 +314,8 @@ OTHER RULES:
 // ============================================================
   const ConferenceForm = ({ initial, onSave, onCancel, isNew, saving, S }: any) => {
     const [form, setForm] = useState(initial);
-    const [newSpeaker, setNewSpeaker] = useState("");
-    const [newTag, setNewTag] = useState("");
-
     const u = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
-    // Past-date guard: compare the event end (or start) to today (YYYY-MM-DD).
     const _eventEnd = form.end || form.start || "";
     const isPastDated = !!_eventEnd && _eventEnd < TODAY;
     const publish = () => {
@@ -296,545 +324,149 @@ OTHER RULES:
     };
 
     const updatePricing = (index, field, value) => {
-      const p = [...form.pricing];
+      const p = [...(form.pricing || [])];
       p[index] = { ...p[index], [field]: value };
       setForm(f => ({ ...f, pricing: p }));
     };
     const addPricingTier = () => {
-      setForm(f => ({ ...f, pricing: [...f.pricing, { id: `tier_${Date.now()}`, tier: "Day Pass", price: null, price_after_deadline: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "", requires_approval: false, sold_out: false, is_early_bird: false, notes: "" }] }));
+      setForm(f => ({ ...f, pricing: [...(f.pricing || []), { id: `tier_${Date.now()}`, tier: "Standard", price: null, price_after_deadline: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "", requires_approval: false, sold_out: false, is_early_bird: false, notes: "" }] }));
     };
     const removePricingTier = (index) => {
-      setForm(f => ({ ...f, pricing: f.pricing.filter((_, i) => i !== index) }));
+      setForm(f => ({ ...f, pricing: (f.pricing || []).filter((_, i) => i !== index) }));
     };
 
-    const updateHotel = (index, field, value) => {
-      const h = [...form.hotels];
-      h[index] = { ...h[index], [field]: value };
-      setForm(f => ({ ...f, hotels: h }));
-    };
-    const addHotel = () => {
-      setForm(f => ({ ...f, hotels: [...f.hotels, { id: `hotel_${Date.now()}`, name: "", stars: 3, conf_rate: 0, rack_rate: 0, currency: "USD", book_by: "", distance: "", booking_url: "", group_code: "" }] }));
-    };
-    const removeHotel = (index) => {
-      setForm(f => ({ ...f, hotels: f.hotels.filter((_, i) => i !== index) }));
-    };
-
-    const addSpeaker = () => { if (newSpeaker.trim()) { u("speakers", [...form.speakers, newSpeaker.trim()]); setNewSpeaker(""); }};
-    const removeSpeaker = (i) => u("speakers", form.speakers.filter((_, idx) => idx !== i));
-    const addTag = () => { if (newTag.trim()) { u("tags", [...form.tags, newTag.trim().toLowerCase()]); setNewTag(""); }};
-    const removeTag = (i) => u("tags", form.tags.filter((_, idx) => idx !== i));
+    const CURRENCIES = ["USD","EUR","GBP","AUD","CAD","SGD","INR","JPY","CHF","AED","BRL","CNY","DKK","HKD","KRW","MXN","NOK","NZD","SEK","ZAR"];
+    const currentStatus = form.status || "draft";
 
     return (
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: 0 }}>
-            {isNew ? "Add Conference" : `Edit: ${form.name}`}
-          </h2>
-          <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ maxWidth: 780, margin: "0 auto" }}>
+        {/* Toolbar: item 7 status + actions */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>{isNew ? "Add Conference" : (form.name || "Edit")}</h2>
+            <span style={{ ...S.tag, background: currentStatus === "active" ? "rgba(34,197,94,0.12)" : "rgba(249,115,22,0.12)", color: currentStatus === "active" ? "#16a34a" : "#f97316" }}>{currentStatus.toUpperCase()}</span>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {!isNew && (
-              <button onClick={() => {
-                if (confirm(`Delete "${form.name}"? This cannot be undone.`)) {
-                  onSave({ ...form, _delete: true }, false);
-                }
-              }} style={{ ...S.btnSecondary, color: "#ef4444", borderColor: "rgba(239,68,68,0.3)" }}>Delete</button>
+              <button onClick={() => { if (confirm(`Delete "${form.name}"? This cannot be undone.`)) onSave({ ...form, _delete: true }, false); }} style={{ ...S.btnSecondary, color: "#ef4444", borderColor: "rgba(239,68,68,0.3)" }}>Delete</button>
             )}
             <button onClick={onCancel} style={S.btnSecondary}>Cancel</button>
-            <button onClick={() => onSave(form, isNew)} disabled={saving} style={{ ...S.btnPrimary, opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Saving..." : isNew ? "Save as Draft" : "Save Changes"}
-            </button>
-            {(isNew || form.status === "draft") && (
+            <button onClick={() => onSave(form, isNew)} disabled={saving} style={{ ...S.btnPrimary, opacity: saving ? 0.6 : 1 }}>{saving ? "Saving..." : isNew ? "Save Draft" : "Save"}</button>
+            {(isNew || currentStatus === "draft") && (
               <>
                 {isPastDated && <span style={{ fontSize: 12, color: "#b91c1c", fontWeight: 700, alignSelf: "center" }}>Past event, confirm to publish</span>}
-                <button onClick={publish} disabled={saving} style={{ ...S.btnPrimary, background: isPastDated ? "#9ca3af" : "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
-                  {saving ? "Saving..." : "Publish"}
-                </button>
+                <button onClick={publish} disabled={saving} style={{ ...S.btnPrimary, background: isPastDated ? "#9ca3af" : "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>{saving ? "Saving..." : "Publish"}</button>
               </>
             )}
-            {!isNew && form.status === "active" && (
-              <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>
-                {saving ? "Saving..." : "Unpublish"}
-              </button>
+            {!isNew && currentStatus === "active" && (
+              <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>{saving ? "Saving..." : "Unpublish"}</button>
             )}
           </div>
         </div>
 
-        {/* DISCOUNT CODE STATUS — prominent at top */}
-        {form.discount_code ? (
-          <div style={{ ...S.card, background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.3)", marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: 0.5 }}>CC DISCOUNT CODE ACTIVE</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#f97316", fontFamily: "monospace", letterSpacing: 2 }}>{form.discount_code}</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316" }}>{form.discount_pct}% off</div>
-                {form.discount_max_uses && <div style={{ fontSize: 11, color: "#6b7280" }}>Limit: {form.discount_max_uses} uses</div>}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ ...S.card, background: "#fafafa", border: "1px dashed #d1d5db", marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>No discount code yet</div>
-                <div style={{ fontSize: 11, color: "#6b7280" }}>Scroll to "CC Discount Code" section to add one after organizer agreement</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {(form.extraction_notes || form.confidence != null) && (
-          <div style={{ ...S.card, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316" }}>EXTRACTION NOTES</div>
+        {/* 1. Confidence + notes + compare link */}
+        {(form.extraction_notes || form.confidence != null || form.source_url) && (
+          <div style={{ ...S.card, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", marginBottom: 12, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <a href={form.source_url || "#"} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: "#2563eb", textDecoration: "none" }}>Open official site to compare</a>
               {form.confidence != null && (
-                <div style={{ fontSize: 12, fontWeight: 700, color: form.confidence >= 0.7 ? "#16a34a" : form.confidence >= 0.5 ? "#f59e0b" : "#ef4444" }}>
-                  Confidence {Math.round(form.confidence * 100)}%
-                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: form.confidence >= 0.7 ? "#16a34a" : form.confidence >= 0.5 ? "#f59e0b" : "#ef4444" }}>Confidence {Math.round(form.confidence * 100)}%</span>
               )}
             </div>
-            {form.extraction_notes && <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{form.extraction_notes}</div>}
-            {form.source_url && (
-              <a href={form.source_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 12, fontWeight: 700, color: "#2563eb", textDecoration: "none" }}>
-                Open official site to compare
-              </a>
-            )}
+            {form.extraction_notes && <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5, marginTop: 6 }}>{form.extraction_notes}</div>}
           </div>
         )}
 
-        {/* MISSING PRICES WARNING */}
-        {form.pricing.some(t => t.price === null) && (
-          <div style={{ ...S.card, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <span style={{ fontSize: 13, color: "#92400e", lineHeight: 1.5 }}><strong>Prices couldn't be auto-extracted.</strong> Many ticketing platforms load prices via JavaScript. Enter prices manually in the Pricing Tiers section below.</span>
-            </div>
+        {/* 2-6. Essentials */}
+        <div style={{ ...S.card, padding: 16 }}>
+          <div style={{ marginBottom: 10 }}>
+            <label style={S.label}>Conference Name</label>
+            <input style={S.input} value={form.name || ""} onChange={e => u("name", e.target.value)} placeholder="e.g. The AI Summit Singapore" />
           </div>
-        )}
-
-        {/* BASIC INFO */}
-        <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Basic Information</div>
-          <div style={{ ...S.grid2, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
-              <label style={S.label}>Conference Name *</label>
-              <input style={S.input} value={form.name} onChange={e => u("name", e.target.value)} placeholder="e.g. RAADfest 2026" />
-            </div>
-            <div>
-              <label style={S.label}>Organizer</label>
-              <input style={S.input} value={form.organizer} onChange={e => u("organizer", e.target.value)} placeholder="e.g. RAAD" />
-            </div>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={S.label}>Description</label>
-            <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} value={form.description} onChange={e => u("description", e.target.value)} placeholder="2-3 sentence description..." />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={S.label}>Source URL</label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input style={{ ...S.input, flex: 1 }} value={form.source_url} onChange={e => u("source_url", e.target.value)} placeholder="https://..." />
-              {form.source_url && (
-                <a href={form.source_url} target="_blank" rel="noopener noreferrer" title="Open in new tab" style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  padding: "0 10px", height: 36, borderRadius: 6, border: "1px solid #374151",
-                  background: "#1f2937", color: "#9ca3af", textDecoration: "none", fontSize: 14,
-                  flexShrink: 0, transition: "color 0.15s",
-                }}>↗</a>
-              )}
-            </div>
-          </div>
-          <div style={S.grid4}>
-            <div>
-              <label style={S.label}>Category</label>
-              <select style={S.input} value={form.category} onChange={e => u("category", e.target.value)}>
-                <option>AI / Tech</option><option>Other</option>
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>Format</label>
-              <select style={S.input} value={form.format} onChange={e => u("format", e.target.value)}>
-                <option>In-person</option><option>Virtual</option><option>Hybrid</option>
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>Language</label>
-              <input style={S.input} value={form.language || ""} onChange={e => u("language", e.target.value)} placeholder="e.g. English, German/English, Japanese" />
-            </div>
-            <div>
-              <label style={S.label}>Status</label>
-              <select style={S.input} value={form.status} onChange={e => u("status", e.target.value)}>
-                <option value="draft">Draft</option><option value="active">Active</option><option value="sold_out">Sold Out</option><option value="expired">Expired</option><option value="archived">Archived</option>
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>Expected Attendees</label>
-              <input style={S.input} type="number" value={form.attendees || ""} onChange={e => u("attendees", e.target.value ? parseInt(e.target.value) : null)} />
-            </div>
-          </div>
-        </div>
-
-        {/* LOCATION & DATES */}
-        <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Location & Dates</div>
-          <div style={S.grid4}>
-            <div>
-              <label style={S.label}>City</label>
-              <input style={S.input} value={form.city} onChange={e => u("city", e.target.value)} />
+              <label style={S.label}>City (include state/province for USA)</label>
+              <input style={S.input} value={form.city || ""} onChange={e => u("city", e.target.value)} placeholder="e.g. Austin, TX" />
             </div>
             <div>
               <label style={S.label}>Country</label>
-              <input style={S.input} value={form.country} onChange={e => u("country", e.target.value)} />
-            </div>
-            <div>
-              <label style={S.label}>Start Date *</label>
-              <input style={{ ...S.input, colorScheme: "dark" }} type="date" value={form.start} onChange={e => u("start", e.target.value)} />
-            </div>
-            <div>
-              <label style={S.label}>End Date *</label>
-              <input style={{ ...S.input, colorScheme: "dark" }} type="date" value={form.end} onChange={e => u("end", e.target.value)} />
+              <input style={S.input} value={form.country || ""} onChange={e => u("country", e.target.value)} placeholder="e.g. USA" />
             </div>
           </div>
-          {form.start && form.end && (() => {
-            const dur = Math.ceil((new Date(form.end) - new Date(form.start)) / (1000*60*60*24)) + 1;
-            return (
-              <div style={{ marginTop: 10, fontSize: 13, color: "#f97316", fontWeight: 600 }}>
-                Duration: {dur} day{dur !== 1 ? "s" : ""}
-              </div>
-            );
-          })()}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={S.label}>Start Date</label>
+              <input style={S.input} type="date" value={form.start || ""} onChange={e => u("start", e.target.value)} />
+            </div>
+            <div>
+              <label style={S.label}>End Date</label>
+              <input style={S.input} type="date" value={form.end || ""} onChange={e => u("end", e.target.value)} />
+            </div>
+          </div>
           {isPastDated && (
-            <div style={{ marginTop: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <span style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>This event date is in the past. It should not be published.</span>
+            <div style={{ marginTop: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 8, padding: "8px 10px", fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+              This event date is in the past. It should not be published.
             </div>
           )}
-          <div style={{ ...S.grid2, marginTop: 12 }}>
-            <div>
-              <label style={S.label}>Venue</label>
-              <input style={S.input} value={form.venue} onChange={e => u("venue", e.target.value)} placeholder="e.g. Los Angeles Convention Center" />
-            </div>
-            <div>
-              <label style={S.label}>Region</label>
-              <select style={S.input} value={form.region} onChange={e => u("region", e.target.value)}>
-                <option>North America</option><option>Europe</option><option>Asia</option><option>Global</option><option>Other</option>
-              </select>
-            </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>Source URL</label>
+            <input style={S.input} value={form.source_url || ""} onChange={e => u("source_url", e.target.value)} placeholder="https://..." />
           </div>
         </div>
 
-        {/* PRICING TIERS */}
-        <div style={S.card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        {/* 8. Pricing tiers */}
+        <div style={{ ...S.card, padding: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", textTransform: "uppercase", letterSpacing: 0.5 }}>Pricing Tiers</div>
             <button onClick={addPricingTier} style={S.btnSecondary}>+ Add Tier</button>
           </div>
-          {form.pricing.length === 0 && (
-            <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>No pricing tiers yet. Add one above.</div>
-          )}
-          {form.pricing.map((tier, i) => {
-            const isExpired = tier.deadline_passed || (tier.deadline && tier.deadline < TODAY);
-            const isSoldOut = !!tier.sold_out;
-            return (
-            <div key={tier.id} style={{ background: isSoldOut ? "rgba(239,68,68,0.05)" : isExpired ? "#fafafa" : "#f9fafb", borderRadius: 10, padding: 16, marginBottom: 8, border: isSoldOut ? "1px solid rgba(239,68,68,0.25)" : isExpired ? "1px solid #f3f4f6" : "1px solid #e5e7eb", opacity: isSoldOut ? 0.7 : 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: isSoldOut ? "#ef4444" : isExpired ? "#ef4444" : "#1e293b" }}>Tier {i + 1}{isSoldOut ? " (SOLD OUT)" : isExpired ? " (EXPIRED)" : ""}</span>
-                  {isSoldOut && <span style={{ fontSize: 9, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "1px 6px", borderRadius: 3, fontWeight: 700 }}>SOLD OUT</span>}
-                  {tier.requires_approval && <span style={{ fontSize: 9, color: "#f59e0b", background: "rgba(245,158,11,0.1)", padding: "1px 6px", borderRadius: 3, fontWeight: 700 }}>REQUIRES APPROVAL</span>}
+          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 88px 130px 58px 26px", gap: 8, alignItems: "center" }}>
+            <div style={S.label}>Tier</div>
+            <div style={S.label}>Price</div>
+            <div style={S.label}>After deadline</div>
+            <div style={S.label}>Currency</div>
+            <div style={S.label}>Early-bird deadline</div>
+            <div style={S.label}>Sold out</div>
+            <div></div>
+            {(form.pricing || []).map((tier, i) => (
+              <Fragment key={tier.id || i}>
+                <input style={S.inputSm} value={tier.tier || ""} onChange={e => updatePricing(i, "tier", e.target.value)} placeholder="Early Bird" />
+                <input style={S.inputSm} type="text" inputMode="numeric" value={fmtMoney(tier.price, tier.currency)} onChange={e => updatePricing(i, "price", parseMoney(e.target.value))} placeholder="Price" />
+                <input style={S.inputSm} type="text" inputMode="numeric" value={fmtMoney(tier.price_after_deadline, tier.currency)} onChange={e => updatePricing(i, "price_after_deadline", parseMoney(e.target.value))} placeholder="After" />
+                <select style={S.inputSm} value={tier.currency || "USD"} onChange={e => updatePricing(i, "currency", e.target.value)}>
+                  {CURRENCIES.map(cx => <option key={cx}>{cx}</option>)}
+                </select>
+                <input style={{ ...S.inputSm, colorScheme: "light" }} type="date" value={tier.deadline || ""} onChange={e => updatePricing(i, "deadline", e.target.value || null)} />
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <input type="checkbox" checked={!!tier.sold_out} onChange={e => updatePricing(i, "sold_out", e.target.checked)} />
                 </div>
-                <button onClick={() => removePricingTier(i)} style={{ ...S.btnGhost, color: "#ef4444" }}>Remove</button>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr", gap: 8, marginBottom: 8 }}>
-                <div>
-                  <label style={S.label}>Tier Name</label>
-                  <input style={S.inputSm} value={tier.tier} onChange={e => updatePricing(i, "tier", e.target.value)} placeholder="e.g. Early Bird, Day Pass" />
-                </div>
-                <div>
-                  <label style={S.label}>Price {tier.price === null ? "(unknown)" : ""}</label>
-                  <input style={{ ...S.inputSm, color: tier.price === null ? "#f59e0b" : undefined }} type="number" value={tier.price === null ? "" : tier.price} onChange={e => updatePricing(i, "price", e.target.value === "" ? null : parseFloat(e.target.value) || 0)} placeholder="null = unknown" />
-                </div>
-                <div>
-                  <label style={S.label}>Price After Deadline</label>
-                  <input style={{ ...S.inputSm, color: tier.price_after_deadline ? "#ef4444" : undefined }} type="number" value={tier.price_after_deadline || ""} onChange={e => updatePricing(i, "price_after_deadline", e.target.value === "" ? null : parseFloat(e.target.value) || 0)} placeholder="e.g. 1899" />
-                </div>
-                <div>
-                  <label style={S.label}>Currency</label>
-                  <select style={S.inputSm} value={tier.currency} onChange={e => updatePricing(i, "currency", e.target.value)}>
-                    <option>AED</option><option>AUD</option><option>BRL</option><option>CAD</option><option>CHF</option><option>CNY</option><option>DKK</option><option>EUR</option><option>GBP</option><option>HKD</option><option>INR</option><option>JPY</option><option>KRW</option><option>MXN</option><option>NOK</option><option>NZD</option><option>SEK</option><option>SGD</option><option>USD</option><option>ZAR</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={S.label}>Deadline</label>
-                  <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.deadline || ""} onChange={e => updatePricing(i, "deadline", e.target.value || null)} />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                <div>
-                  <label style={S.label}>Early Bird Start</label>
-                  <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.early_bird_start || ""} onChange={e => updatePricing(i, "early_bird_start", e.target.value || null)} />
-                </div>
-                <div>
-                  <label style={S.label}>Early Bird End</label>
-                  <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.early_bird_end || ""} onChange={e => updatePricing(i, "early_bird_end", e.target.value || null)} />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 2fr", gap: 8 }}>
-                <div>
-                  <label style={S.label}>Days Included</label>
-                  <input style={S.inputSm} value={tier.days_included || ""} onChange={e => updatePricing(i, "days_included", e.target.value)} placeholder='"all" or "Day 1 only"' />
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#6b7280" }}>
-                    <input type="checkbox" checked={!!tier.deadline_passed} onChange={e => updatePricing(i, "deadline_passed", e.target.checked)} />
-                    Deadline passed
-                  </label>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#6b7280" }}>
-                    <input type="checkbox" checked={!!tier.requires_approval} onChange={e => updatePricing(i, "requires_approval", e.target.checked)} />
-                    Requires approval
-                  </label>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: isSoldOut ? "#ef4444" : "#374151" }}>
-                    <input type="checkbox" checked={isSoldOut} onChange={e => updatePricing(i, "sold_out", e.target.checked)} />
-                    Sold out
-                  </label>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: tier.is_early_bird ? "#f97316" : "#6b7280" }}>
-                    <input type="checkbox" checked={!!tier.is_early_bird} onChange={e => updatePricing(i, "is_early_bird", e.target.checked)} />
-                    Early bird
-                  </label>
-                </div>
-                <div>
-                  <label style={S.label}>Notes</label>
-                  <input style={S.inputSm} value={tier.notes} onChange={e => updatePricing(i, "notes", e.target.value)} placeholder="e.g. Includes networking dinner" />
-                </div>
-              </div>
-            </div>
-            );
-          })}
+                <button onClick={() => removePricingTier(i)} title="Remove tier" style={{ ...S.btnGhost, color: "#ef4444", padding: 2, fontSize: 18, lineHeight: 1 }}>×</button>
+              </Fragment>
+            ))}
+          </div>
+          {(form.pricing || []).length === 0 && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8 }}>No tiers yet. Click Add Tier.</div>}
         </div>
 
-        {/* DISCOUNT CODE */}
-        <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>CC Discount Code</div>
-          <div style={S.grid4}>
+        {/* 9. Discount code */}
+        <div style={{ ...S.card, padding: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>CC Discount Code</div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 10 }}>
             <div>
               <label style={S.label}>Code</label>
-              <input style={{ ...S.input, fontFamily: "monospace", letterSpacing: 1 }} value={form.discount_code} onChange={e => u("discount_code", e.target.value.toUpperCase())} placeholder="e.g. RAAD-CC" />
+              <input style={{ ...S.input, fontFamily: "monospace", letterSpacing: 1 }} value={form.discount_code || ""} onChange={e => u("discount_code", e.target.value.toUpperCase())} placeholder="e.g. AISUMMIT-CC" />
             </div>
             <div>
               <label style={S.label}>Discount %</label>
-              <input style={S.input} type="number" value={form.discount_pct} onChange={e => u("discount_pct", parseFloat(e.target.value) || 0)} />
+              <input style={S.input} type="text" inputMode="decimal" value={form.discount_pct ?? ""} onChange={e => u("discount_pct", e.target.value.replace(/[^0-9.]/g, ""))} placeholder="10" />
             </div>
             <div>
               <label style={S.label}>Max Uses</label>
-              <input style={S.input} type="number" value={form.discount_max_uses || ""} onChange={e => u("discount_max_uses", e.target.value ? parseInt(e.target.value) : null)} placeholder="Empty = unlimited" />
+              <input style={S.input} type="text" inputMode="numeric" value={form.discount_max_uses ?? ""} onChange={e => u("discount_max_uses", parseIntOrNull(e.target.value))} placeholder="Unlimited" />
             </div>
             <div>
               <label style={S.label}>Uses So Far</label>
-              <input style={S.input} type="number" value={form.discount_uses} onChange={e => u("discount_uses", parseInt(e.target.value) || 0)} />
+              <input style={S.input} type="text" inputMode="numeric" value={form.discount_uses ?? ""} onChange={e => u("discount_uses", parseIntOrNull(e.target.value) || 0)} placeholder="0" />
             </div>
-          </div>
-        </div>
-
-        {/* HOTELS */}
-        <div style={S.card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 0.5 }}>Hotel Partners</div>
-            <button onClick={addHotel} style={S.btnSecondary}>+ Add Hotel</button>
-          </div>
-          {form.hotels.length === 0 && (
-            <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>No hotel partners found. Add one or extraction may not have found hotel info.</div>
-          )}
-          {form.hotels.map((hotel, i) => (
-            <div key={hotel.id} style={{ background: "#f0f7ff", borderRadius: 10, padding: 16, marginBottom: 8, border: "1px solid rgba(96,165,250,0.25)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa" }}>Hotel {i + 1}</span>
-                <button onClick={() => removeHotel(i)} style={{ ...S.btnGhost, color: "#ef4444" }}>Remove</button>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-                <div>
-                  <label style={S.label}>Hotel Name</label>
-                  <input style={S.inputSm} value={hotel.name} onChange={e => updateHotel(i, "name", e.target.value)} />
-                </div>
-                <div>
-                  <label style={S.label}>Stars</label>
-                  <select style={S.inputSm} value={hotel.stars} onChange={e => updateHotel(i, "stars", parseInt(e.target.value))}>
-                    <option value={2}>2</option><option value={3}>3</option><option value={4}>4</option><option value={5}>5</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={S.label}>Conf Rate</label>
-                  <input style={S.inputSm} type="number" value={hotel.conf_rate} onChange={e => updateHotel(i, "conf_rate", parseFloat(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <label style={S.label}>Rack Rate</label>
-                  <input style={S.inputSm} type="number" value={hotel.rack_rate} onChange={e => updateHotel(i, "rack_rate", parseFloat(e.target.value) || 0)} />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-                <div>
-                  <label style={S.label}>Book By</label>
-                  <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={hotel.book_by} onChange={e => updateHotel(i, "book_by", e.target.value)} />
-                </div>
-                <div>
-                  <label style={S.label}>Distance</label>
-                  <input style={S.inputSm} value={hotel.distance} onChange={e => updateHotel(i, "distance", e.target.value)} placeholder="0.2 mi" />
-                </div>
-                <div>
-                  <label style={S.label}>Booking URL</label>
-                  <input style={S.inputSm} value={hotel.booking_url} onChange={e => updateHotel(i, "booking_url", e.target.value)} />
-                </div>
-                <div>
-                  <label style={S.label}>Group Code</label>
-                  <input style={S.inputSm} value={hotel.group_code} onChange={e => updateHotel(i, "group_code", e.target.value)} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* SPEAKERS & TAGS */}
-        <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Speakers & Tags</div>
-          <div style={S.grid2}>
-            <div>
-              <label style={S.label}>Speakers</label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input style={{ ...S.inputSm, flex: 1 }} value={newSpeaker} onChange={e => setNewSpeaker(e.target.value)} onKeyDown={e => e.key === "Enter" && addSpeaker()} placeholder="Speaker name" />
-                <button onClick={addSpeaker} style={S.btnSecondary}>Add</button>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {form.speakers.map((s, i) => (
-                  <span key={i} style={{ ...S.tag, background: "#e5e7eb", color: "#374151", cursor: "pointer" }} onClick={() => removeSpeaker(i)}>{s} ×</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label style={S.label}>Tags</label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input style={{ ...S.inputSm, flex: 1 }} value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag()} placeholder="Tag" />
-                <button onClick={addTag} style={S.btnSecondary}>Add</button>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {form.tags.map((t, i) => (
-                  <span key={i} style={{ ...S.tag, background: "rgba(249,115,22,0.1)", color: "#fb923c", cursor: "pointer" }} onClick={() => removeTag(i)}>{t} ×</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ORGANIZER CONTACT & OUTREACH */}
-        <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Organizer Contact & Outreach</div>
-          <div style={S.grid3}>
-            <div>
-              <label style={S.label}>Contact Name</label>
-              <input style={S.input} value={form.organizer_contact?.name || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, name: e.target.value })} placeholder="e.g. Sarah Chen" />
-            </div>
-            <div>
-              <label style={S.label}>Role / Title</label>
-              <input style={S.input} value={form.organizer_contact?.role || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, role: e.target.value })} placeholder="e.g. Head of Partnerships" />
-            </div>
-            <div>
-              <label style={S.label}>Email</label>
-              <input style={S.input} value={form.organizer_contact?.email || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, email: e.target.value })} placeholder="partnerships@conference.com" />
-            </div>
-          </div>
-          <div style={{ ...S.grid3, marginTop: 12 }}>
-            <div>
-              <label style={S.label}>Phone</label>
-              <input style={S.input} value={form.organizer_contact?.phone || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, phone: e.target.value })} />
-            </div>
-            <div>
-              <label style={S.label}>Website</label>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input style={{ ...S.input, flex: 1 }} value={form.organizer_contact?.website || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, website: e.target.value })} />
-                {form.organizer_contact?.website && (
-                  <a href={form.organizer_contact.website} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, padding: "9px 10px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#6b7280", display: "flex", alignItems: "center", textDecoration: "none" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  </a>
-                )}
-              </div>
-            </div>
-            <div>
-              <label style={S.label}>Outreach Status</label>
-              <select style={S.input} value={form.organizer_contact?.outreach_status || "not_contacted"} onChange={e => u("organizer_contact", { ...form.organizer_contact, outreach_status: e.target.value })}>
-                <option value="not_contacted">Not Contacted</option>
-                <option value="emailed">Emailed</option>
-                <option value="called">Called</option>
-                <option value="in_discussion">In Discussion</option>
-                <option value="agreed">Agreed — Code Pending</option>
-                <option value="live">Live — Code Active</option>
-                <option value="declined">Declined</option>
-                <option value="no_response">No Response</option>
-              </select>
-            </div>
-          </div>
-          <div style={{ ...S.grid2, marginTop: 12 }}>
-            <div>
-              <label style={S.label}>Affiliate Program?</label>
-              <select style={S.input} value={form.organizer_contact?.affiliate || "unknown"} onChange={e => u("organizer_contact", { ...form.organizer_contact, affiliate: e.target.value })}>
-                <option value="unknown">Unknown</option>
-                <option value="yes">Yes — Has Affiliate Program</option>
-                <option value="no">No Affiliate Program</option>
-                <option value="custom">Custom Deal Possible</option>
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>Affiliate / Commission Details</label>
-              <input style={S.input} value={form.organizer_contact?.affiliate_details || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, affiliate_details: e.target.value })} placeholder="e.g. 15% commission, 30-day cookie, via Impact.com" />
-            </div>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <label style={S.label}>Affiliate Program URL</label>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <input style={{ ...S.input, flex: 1 }} value={form.organizer_contact?.affiliate_url || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, affiliate_url: e.target.value })} placeholder="https://..." />
-              {form.organizer_contact?.affiliate_url && (
-                <a href={form.organizer_contact.affiliate_url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, padding: "9px 10px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#6b7280", display: "flex", alignItems: "center", textDecoration: "none" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                </a>
-              )}
-            </div>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <label style={S.label}>Outreach Notes</label>
-            <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} value={form.organizer_contact?.notes || ""} onChange={e => u("organizer_contact", { ...form.organizer_contact, notes: e.target.value })} placeholder="e.g. Spoke with Sarah on Feb 15, she's checking with marketing team. Follow up March 1." />
-          </div>
-        </div>
-
-        {/* BOTTOM ACTIONS */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-          <button onClick={onCancel} style={S.btnSecondary}>Cancel</button>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => onSave(form, isNew)} disabled={saving} style={{ ...S.btnPrimary, opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Saving..." : isNew ? "Save as Draft" : "Save Changes"}
-            </button>
-            {(isNew || form.status === "draft") && (
-              <>
-                {isPastDated && <span style={{ fontSize: 12, color: "#b91c1c", fontWeight: 700, alignSelf: "center" }}>Past event, confirm to publish</span>}
-                <button onClick={publish} disabled={saving} style={{ ...S.btnPrimary, background: isPastDated ? "#9ca3af" : "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
-                  {saving ? "Saving..." : "Publish"}
-                </button>
-              </>
-            )}
-            {!isNew && form.status === "active" && (
-              <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>
-                {saving ? "Saving..." : "Unpublish"}
-              </button>
-            )}
           </div>
         </div>
       </div>
