@@ -64,25 +64,15 @@ function CandidatesTool() {
     setSelected(next);
   };
 
-  // Worker secret is entered once and kept in sessionStorage (not hardcoded).
-  const getSecret = () => {
-    let s = sessionStorage.getItem("worker_secret");
-    if (!s) {
-      s = window.prompt("Enter WORKER_SECRET to trigger jobs:") || "";
-      if (s) sessionStorage.setItem("worker_secret", s);
-    }
-    return s;
-  };
-
+  // Triggers run through the admin-authenticated endpoint (uses the login cookie),
+  // so no worker secret is needed in the UI.
   const runJob = async (job) => {
-    const secret = getSecret();
-    if (!secret) return;
     setRunning(job);
     try {
-      const res = await fetch(`/api/jobs/${job}`, { method: "POST", headers: { "x-worker-secret": secret } });
+      const res = await fetch(`/api/admin/run?job=${job}`, { method: "POST" });
+      if (res.status === 401) { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); return; }
       const data = await res.json();
-      if (res.status === 401) { sessionStorage.removeItem("worker_secret"); showToast("Invalid worker secret", "error"); }
-      else if (res.ok) { showToast(`${job} run complete`, "success"); load(status); }
+      if (res.ok) { showToast(`${job} run complete`, "success"); load(status); }
       else showToast(data.error || `${job} failed`, "error");
     } catch (e) { showToast(`${job} request failed`, "error"); }
     setRunning(null);
@@ -95,6 +85,7 @@ function CandidatesTool() {
         <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Conference<span style={{ color: "#f97316" }}>Codes</span> · Candidates</span>
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
+          <a href="/admin/review" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Review</a>
           <button style={{ ...S.btnSecondary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("discover")}>{running === "discover" ? "Running..." : "Run discovery"}</button>
           <button style={{ ...S.btnPrimary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("ingest")}>{running === "ingest" ? "Running..." : "Run ingestion"}</button>
         </div>
