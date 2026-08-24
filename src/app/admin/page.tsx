@@ -380,10 +380,22 @@ OTHER RULES:
           </div>
         )}
 
-        {form.extraction_notes && (
+        {(form.extraction_notes || form.confidence != null) && (
           <div style={{ ...S.card, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", marginBottom: 4 }}>EXTRACTION NOTES</div>
-            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{form.extraction_notes}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316" }}>EXTRACTION NOTES</div>
+              {form.confidence != null && (
+                <div style={{ fontSize: 12, fontWeight: 700, color: form.confidence >= 0.7 ? "#16a34a" : form.confidence >= 0.5 ? "#f59e0b" : "#ef4444" }}>
+                  Confidence {Math.round(form.confidence * 100)}%
+                </div>
+              )}
+            </div>
+            {form.extraction_notes && <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{form.extraction_notes}</div>}
+            {form.source_url && (
+              <a href={form.source_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 12, fontWeight: 700, color: "#2563eb", textDecoration: "none" }}>
+                Open official site to compare
+              </a>
+            )}
           </div>
         )}
 
@@ -545,6 +557,16 @@ OTHER RULES:
                 <div>
                   <label style={S.label}>Deadline</label>
                   <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.deadline || ""} onChange={e => updatePricing(i, "deadline", e.target.value || null)} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={S.label}>Early Bird Start</label>
+                  <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.early_bird_start || ""} onChange={e => updatePricing(i, "early_bird_start", e.target.value || null)} />
+                </div>
+                <div>
+                  <label style={S.label}>Early Bird End</label>
+                  <input style={{ ...S.inputSm, colorScheme: "dark" }} type="date" value={tier.early_bird_end || ""} onChange={e => updatePricing(i, "early_bird_end", e.target.value || null)} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 2fr", gap: 8 }}>
@@ -1138,7 +1160,6 @@ function AdminTool() {
           <button onClick={() => { setView("list"); setEditingConf(null); setExtractedData(null); }} style={view === "list" ? S.btnPrimary : S.btnSecondary}>All Conferences</button>
           <button onClick={() => { setView("add"); setEditingConf(null); setExtractedData(null); setExtractUrl(""); setExtractStatus(""); }} style={view === "add" ? S.btnPrimary : S.btnSecondary}>+ Add New</button>
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Candidates</a>
-          <a href="/admin/review" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Review</a>
         </div>
       </div>
 
