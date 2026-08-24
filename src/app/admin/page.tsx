@@ -287,6 +287,14 @@ OTHER RULES:
 
     const u = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
+    // Past-date guard: compare the event end (or start) to today (YYYY-MM-DD).
+    const _eventEnd = form.end || form.start || "";
+    const isPastDated = !!_eventEnd && _eventEnd < TODAY;
+    const publish = () => {
+      if (isPastDated && !window.confirm("This event date is in the past. Publishing will make a past event public on the site. Publish anyway?")) return;
+      onSave({ ...form, status: "active" }, isNew);
+    };
+
     const updatePricing = (index, field, value) => {
       const p = [...form.pricing];
       p[index] = { ...p[index], [field]: value };
@@ -335,9 +343,12 @@ OTHER RULES:
               {saving ? "Saving..." : isNew ? "Save as Draft" : "Save Changes"}
             </button>
             {(isNew || form.status === "draft") && (
-              <button onClick={() => onSave({ ...form, status: "active" }, isNew)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
-                {saving ? "Saving..." : "Publish"}
-              </button>
+              <>
+                {isPastDated && <span style={{ fontSize: 12, color: "#b91c1c", fontWeight: 700, alignSelf: "center" }}>Past event, confirm to publish</span>}
+                <button onClick={publish} disabled={saving} style={{ ...S.btnPrimary, background: isPastDated ? "#9ca3af" : "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
+                  {saving ? "Saving..." : "Publish"}
+                </button>
+              </>
             )}
             {!isNew && form.status === "active" && (
               <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>
@@ -499,6 +510,12 @@ OTHER RULES:
               </div>
             );
           })()}
+          {isPastDated && (
+            <div style={{ marginTop: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>This event date is in the past. It should not be published.</span>
+            </div>
+          )}
           <div style={{ ...S.grid2, marginTop: 12 }}>
             <div>
               <label style={S.label}>Venue</label>
@@ -806,9 +823,12 @@ OTHER RULES:
               {saving ? "Saving..." : isNew ? "Save as Draft" : "Save Changes"}
             </button>
             {(isNew || form.status === "draft") && (
-              <button onClick={() => onSave({ ...form, status: "active" }, isNew)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
-                {saving ? "Saving..." : "Publish"}
-              </button>
+              <>
+                {isPastDated && <span style={{ fontSize: 12, color: "#b91c1c", fontWeight: 700, alignSelf: "center" }}>Past event, confirm to publish</span>}
+                <button onClick={publish} disabled={saving} style={{ ...S.btnPrimary, background: isPastDated ? "#9ca3af" : "linear-gradient(135deg, #22c55e, #16a34a)", opacity: saving ? 0.6 : 1 }}>
+                  {saving ? "Saving..." : "Publish"}
+                </button>
+              </>
             )}
             {!isNew && form.status === "active" && (
               <button onClick={() => onSave({ ...form, status: "draft" }, false)} disabled={saving} style={{ ...S.btnPrimary, background: "linear-gradient(135deg, #f97316, #ea580c)", opacity: saving ? 0.6 : 1 }}>
