@@ -10,12 +10,15 @@ import type { JobLogger } from "./log";
 export interface ScrapeResult {
   json: any | null;
   links: string[];
+  markdown: string; // raw page text, used to ground extracted prices/dates
 }
 
-// One Firecrawl scrape. Optionally also returns the page's links.
+// One Firecrawl scrape. Always returns markdown (for grounding); optionally the
+// page's links and a JSON extraction (schema + anti-fabrication prompt).
 export async function firecrawlScrape(opts: {
   url: string;
   schema?: Record<string, unknown>;
+  prompt?: string;
   proxy: "basic" | "stealth";
   withLinks?: boolean;
   logger: JobLogger;
@@ -23,8 +26,8 @@ export async function firecrawlScrape(opts: {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) throw new Error("FIRECRAWL_API_KEY not configured");
 
-  const formats: any[] = [];
-  if (opts.schema) formats.push({ type: "json", schema: opts.schema });
+  const formats: any[] = ["markdown"];
+  if (opts.schema) formats.push({ type: "json", schema: opts.schema, ...(opts.prompt ? { prompt: opts.prompt } : {}) });
   if (opts.withLinks) formats.push("links");
 
   opts.logger.spend("firecrawl.scrape", { url: opts.url, proxy: opts.proxy, links: !!opts.withLinks });
@@ -39,15 +42,15 @@ export async function firecrawlScrape(opts: {
     const data = await res.json();
     if (!res.ok) {
       opts.logger.warn("firecrawl.error", { url: opts.url, status: res.status, error: data?.error });
-      return { json: null, links: [] };
+      return { json: null, links: [], markdown: "" };
     }
     const d = data?.data ?? {};
     const rawLinks = Array.isArray(d.links) ? d.links : [];
     const links = rawLinks.map((l: any) => (typeof l === "string" ? l : l?.url)).filter(Boolean);
-    return { json: d.json ?? d.extract ?? null, links };
+    return { json: d.json ?? d.extract ?? null, links, markdown: typeof d.markdown === "string" ? d.markdown : "" };
   } catch (e: any) {
     opts.logger.warn("firecrawl.threw", { url: opts.url, error: e?.message });
-    return { json: null, links: [] };
+    return { json: null, links: [], markdown: "" };
   }
 }
 

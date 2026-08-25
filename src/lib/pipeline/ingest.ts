@@ -10,9 +10,11 @@ import {
 import { callClaude, parseJsonLoose, textFromResponse } from "./claude";
 import { firecrawlScrape, firecrawlMap } from "./firecrawl";
 import {
+  EXTRACTION_JSON_PROMPT,
   EXTRACTION_JSON_SCHEMA,
   EXTRACTION_SYSTEM,
-  hasUsablePricing,
+  groundTiers,
+  hasGroundedPricing,
   normalizeExtraction,
   validateExtraction,
 } from "./extract-schema";
@@ -120,18 +122,27 @@ interface PricingFind {
 
 async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promise<PricingFind> {
   const schema = EXTRACTION_JSON_SCHEMA;
+  const prompt = EXTRACTION_JSON_PROMPT;
   const tried: string[] = [];
   let calls = 0;
+
+  // Extracted tiers are only kept if their prices literally appear in the page
+  // markdown; ungrounded/fabricated prices are dropped before deciding "found".
+  const grounded = (json: any, markdown: string): ExtractedTier[] =>
+    groundTiers(normalizeExtraction(json)?.pricing_tiers ?? [], markdown);
 
   // 1. The given URL (basic), also fetching its links.
   tried.push(givenUrl);
   calls++;
-  const first = await firecrawlScrape({ url: givenUrl, schema, proxy: "basic", withLinks: true, logger });
+  const first = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "basic", withLinks: true, logger });
   const baseFromGiven = normalizeExtraction(first.json);
-  if (hasUsablePricing(first.json)) {
-    logger.info("pricing.found", { from: "given", url: givenUrl });
-    return { pricingTiers: baseFromGiven?.pricing_tiers ?? [], baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
+  const g1 = grounded(first.json, first.markdown);
+  if (hasGroundedPricing(g1)) {
+    logger.info("pricing.found", { from: "given", url: givenUrl, tiers: g1.length });
+    return { pricingTiers: g1, baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
   }
+  const rawCount1 = (normalizeExtraction(first.json)?.pricing_tiers ?? []).filter((t) => t.price != null).length;
+  logger.info("pricing.ungrounded", { url: givenUrl, rawPricedTiers: rawCount1, groundedPricedTiers: 0 });
 
   // 2. Link scan: follow the best pricing/tickets links on that page.
   const linkCands = rankPricingLinks(first.links, givenUrl).slice(0, 2);
@@ -139,10 +150,11 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   for (const cand of linkCands) {
     tried.push(cand);
     calls++;
-    const c = await firecrawlScrape({ url: cand, schema, proxy: "basic", logger });
-    if (hasUsablePricing(c.json)) {
-      logger.info("pricing.found", { from: "link_scan", url: cand });
-      return { pricingTiers: normalizeExtraction(c.json)?.pricing_tiers ?? [], baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", logger });
+    const g = grounded(c.json, c.markdown);
+    if (hasGroundedPricing(g)) {
+      logger.info("pricing.found", { from: "link_scan", url: cand, tiers: g.length });
+      return { pricingTiers: g, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
     }
   }
 
@@ -155,10 +167,11 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   for (const cand of mapCands) {
     tried.push(cand);
     calls++;
-    const c = await firecrawlScrape({ url: cand, schema, proxy: "basic", logger });
-    if (hasUsablePricing(c.json)) {
-      logger.info("pricing.found", { from: "map", url: cand });
-      return { pricingTiers: normalizeExtraction(c.json)?.pricing_tiers ?? [], baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", logger });
+    const g = grounded(c.json, c.markdown);
+    if (hasGroundedPricing(g)) {
+      logger.info("pricing.found", { from: "map", url: cand, tiers: g.length });
+      return { pricingTiers: g, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
     }
   }
 
@@ -167,11 +180,11 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     logger.info("pricing.stealth_last_resort", { url: givenUrl });
     tried.push(`${givenUrl} (stealth)`);
     calls++;
-    const s = await firecrawlScrape({ url: givenUrl, schema, proxy: "stealth", withLinks: true, logger });
-    if (hasUsablePricing(s.json)) {
-      logger.info("pricing.found", { from: "stealth", url: givenUrl });
-      const sBase = normalizeExtraction(s.json);
-      return { pricingTiers: sBase?.pricing_tiers ?? [], baseFromGiven: sBase ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+    const s = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "stealth", withLinks: true, logger });
+    const g = grounded(s.json, s.markdown);
+    if (hasGroundedPricing(g)) {
+      logger.info("pricing.found", { from: "stealth", url: givenUrl, tiers: g.length });
+      return { pricingTiers: g, baseFromGiven: normalizeExtraction(s.json) ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
     }
     logger.warn("pricing.none_found", { url: givenUrl, tried });
     return { pricingTiers: [], baseFromGiven, pricingUrl: null, tried, proxyUsed: "stealth", firecrawlCalls: calls };
