@@ -29,6 +29,7 @@ function CandidatesTool() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [running, setRunning] = useState(null);
+  const [progress, setProgress] = useState(null);
 
   const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
@@ -69,11 +70,34 @@ function CandidatesTool() {
   const runJob = async (job) => {
     setRunning(job);
     try {
-      const res = await fetch(`/api/admin/run?job=${job}`, { method: "POST" });
-      if (res.status === 401) { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); return; }
-      const data = await res.json();
-      if (res.ok) { showToast(`${job} run complete`, "success"); load(status); }
-      else showToast(data.error || `${job} failed`, "error");
+      if (job === "ingest") {
+        // Drain the approved queue batch by batch (each call respects the
+        // per-batch size for the serverless timeout), with live progress.
+        let ingested = 0, failed = 0, remaining = null;
+        setProgress("Ingesting...");
+        for (let round = 0; round < 40; round++) {
+          const res = await fetch(`/api/admin/run?job=ingest`, { method: "POST" });
+          if (res.status === 401) { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); return; }
+          const data = await res.json();
+          if (!res.ok) { showToast(data.error || "ingestion failed", "error"); break; }
+          const r = data.result || {};
+          const rs = r.results || [];
+          ingested += rs.filter((x) => x.status === "ingested").length;
+          failed += rs.filter((x) => x.status === "failed").length;
+          remaining = r.remainingApproved ?? 0;
+          setProgress(`Ingesting... ${ingested} into drafts, ${failed} failed, ${remaining} approved remaining`);
+          if (remaining === 0 || (r.processed ?? 0) === 0) break;
+        }
+        setProgress(null);
+        showToast(`Ingestion complete. ${ingested} into drafts, ${failed} failed, ${remaining ?? 0} remaining.`, "success");
+        load(status);
+      } else {
+        const res = await fetch(`/api/admin/run?job=${job}`, { method: "POST" });
+        if (res.status === 401) { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); return; }
+        const data = await res.json();
+        if (res.ok) { showToast(`${job} run complete`, "success"); load(status); }
+        else showToast(data.error || `${job} failed`, "error");
+      }
     } catch (e) { showToast(`${job} request failed`, "error"); }
     setRunning(null);
   };
@@ -91,6 +115,9 @@ function CandidatesTool() {
           <button style={{ ...S.btnPrimary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("ingest")}>{running === "ingest" ? "Running..." : "Run ingestion"}</button>
         </div>
       </div>
+      {progress && (
+        <div style={{ background: "#fff7ed", borderBottom: "1px solid rgba(249,115,22,0.25)", color: "#9a3412", fontSize: 13, fontWeight: 600, padding: "8px 32px" }}>{progress}</div>
+      )}
 
       <div style={S.container}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
