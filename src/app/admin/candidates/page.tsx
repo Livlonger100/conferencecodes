@@ -2,11 +2,21 @@
 "use client";
 import { useState, useEffect } from "react";
 
-// Approval gate UI (Task 3). Lists discovered candidates and lets you approve or
-// reject them (single or bulk). Also provides protected manual triggers for the
-// discovery and ingestion workers. Reuses the existing admin password gate.
+// Candidate pipeline UI: Discovered -> (select + Scrape selected) -> Drafted ->
+// review -> Published, plus a Failed bucket. "Scrape selected" queues and scrapes
+// in one action. Reuses the existing admin password gate.
 
-const STATUSES = ["discovered", "approved", "rejected", "ingested", "failed", "all"];
+// Tabs shown to the user. DB status values stay internal ("ingested" shows as
+// "Drafted"); the transient "approved" queue state is never shown as a tab.
+const TABS = [
+  { key: "discovered", label: "Discovered" },
+  { key: "ingested", label: "Drafted" },
+  { key: "failed", label: "Failed" },
+  { key: "rejected", label: "Rejected" },
+  { key: "all", label: "All" },
+];
+const STATUS_LABEL = { discovered: "Discovered", ingested: "Drafted", failed: "Failed", rejected: "Rejected", approved: "Queued" };
+const statusLabel = (s) => STATUS_LABEL[s] || s;
 
 const S = {
   page: { minHeight: "100vh", background: "#f8f9fa", color: "#374151", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
@@ -31,7 +41,8 @@ function CandidatesTool() {
   const [running, setRunning] = useState(null);
   const [progress, setProgress] = useState(null);
 
-  const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
+  const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast(null), 5000); };
+  const sessionExpired = () => { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); setRunning(null); };
 
   const load = async (st = status) => {
     setLoading(true);
@@ -47,61 +58,83 @@ function CandidatesTool() {
 
   useEffect(() => { load(status); /* eslint-disable-next-line */ }, [status]);
 
-  const act = async (ids, action) => {
-    if (ids.length === 0) return;
-    const res = await fetch("/api/candidates", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids, action }),
-    });
-    const data = await res.json();
-    const label = action === "approve" ? "Approved" : action === "reject" ? "Rejected" : "Requeued for ingestion";
-    if (res.ok) { showToast(`${label}: ${data.updated}`, "success"); load(status); }
-    else showToast(data.error || "Action failed", "error");
-  };
-
   const toggle = (id) => {
     const next = new Set(selected);
     next.has(id) ? next.delete(id) : next.add(id);
     setSelected(next);
   };
 
-  // Triggers run through the admin-authenticated endpoint (uses the login cookie),
-  // so no worker secret is needed in the UI.
-  const runJob = async (job) => {
-    setRunning(job);
+  const reject = async (ids) => {
+    if (!ids.length) return;
+    const res = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, action: "reject" }) });
+    if (res.status === 401) return sessionExpired();
+    const data = await res.json();
+    if (res.ok) { showToast(`Rejected: ${data.updated}`, "success"); load(status); }
+    else showToast(data.error || "Action failed", "error");
+  };
+
+  // Queue the selected candidates (discovered -> queue, or drafted/failed ->
+  // re-scrape) and then scrape them into drafts, looping batches until done.
+  const scrapeMany = async (ids, action) => {
+    if (!ids.length) return;
+    setRunning("scrape");
     try {
-      if (job === "ingest") {
-        // Drain the approved queue batch by batch (each call respects the
-        // per-batch size for the serverless timeout), with live progress.
-        let ingested = 0, failed = 0, remaining = null;
-        setProgress("Ingesting...");
-        for (let round = 0; round < 40; round++) {
-          const res = await fetch(`/api/admin/run?job=ingest`, { method: "POST" });
-          if (res.status === 401) { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); return; }
-          const data = await res.json();
-          if (!res.ok) { showToast(data.error || "ingestion failed", "error"); break; }
-          const r = data.result || {};
-          const rs = r.results || [];
-          ingested += rs.filter((x) => x.status === "ingested").length;
-          failed += rs.filter((x) => x.status === "failed").length;
-          remaining = r.remainingApproved ?? 0;
-          setProgress(`Ingesting... ${ingested} into drafts, ${failed} failed, ${remaining} approved remaining`);
-          if (remaining === 0 || (r.processed ?? 0) === 0) break;
-        }
-        setProgress(null);
-        showToast(`Ingestion complete. ${ingested} into drafts, ${failed} failed, ${remaining ?? 0} remaining.`, "success");
-        load(status);
-      } else {
-        const res = await fetch(`/api/admin/run?job=${job}`, { method: "POST" });
-        if (res.status === 401) { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); return; }
+      const q = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, action }) });
+      if (q.status === 401) return sessionExpired();
+      if (!q.ok) { const d = await q.json(); showToast(d.error || "Could not queue", "error"); setRunning(null); return; }
+      let drafted = 0, failed = 0, remaining = null;
+      setProgress("Scraping...");
+      for (let round = 0; round < 60; round++) {
+        const res = await fetch(`/api/admin/run?job=ingest`, { method: "POST" });
+        if (res.status === 401) return sessionExpired();
         const data = await res.json();
-        if (res.ok) { showToast(`${job} run complete`, "success"); load(status); }
-        else showToast(data.error || `${job} failed`, "error");
+        if (!res.ok) { showToast(data.error || "Scrape failed", "error"); break; }
+        const r = data.result || {};
+        const rs = r.results || [];
+        drafted += rs.filter((x) => x.status === "ingested").length;
+        failed += rs.filter((x) => x.status === "failed").length;
+        remaining = r.remainingApproved ?? 0;
+        setProgress(`Scraping... ${drafted} drafted, ${failed} failed, ${remaining} remaining`);
+        if (remaining === 0 || (r.processed ?? 0) === 0) break;
       }
-    } catch (e) { showToast(`${job} request failed`, "error"); }
+      setProgress(null);
+      showToast(`Scraping complete. ${drafted} drafted, ${failed} failed.`, "success");
+      load(status);
+    } catch (e) { setProgress(null); showToast("Scrape request failed", "error"); }
     setRunning(null);
   };
+
+  // Scrape a single candidate (scoped by id, does not drain others).
+  const scrapeOne = async (id, action) => {
+    setRunning("scrape");
+    try {
+      const q = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id], action }) });
+      if (q.status === 401) return sessionExpired();
+      const res = await fetch(`/api/admin/run?job=ingest&id=${id}`, { method: "POST" });
+      if (res.status === 401) return sessionExpired();
+      const data = await res.json();
+      const r0 = (data.result?.results || [])[0];
+      if (res.ok) showToast(r0?.status === "failed" ? `Failed: ${r0.reason || "no pricing found"}` : "Drafted", r0?.status === "failed" ? "error" : "success");
+      else showToast(data.error || "Scrape failed", "error");
+      load(status);
+    } catch (e) { showToast("Scrape request failed", "error"); }
+    setRunning(null);
+  };
+
+  const runDiscover = async () => {
+    setRunning("discover");
+    try {
+      const res = await fetch(`/api/admin/run?job=discover`, { method: "POST" });
+      if (res.status === 401) return sessionExpired();
+      const data = await res.json();
+      if (res.ok) { showToast("Discovery run complete", "success"); load(status); }
+      else showToast(data.error || "Discovery failed", "error");
+    } catch (e) { showToast("Discovery request failed", "error"); }
+    setRunning(null);
+  };
+
+  const selectable = status === "discovered" || status === "ingested" || status === "failed";
+  const currentLabel = (TABS.find((t) => t.key === status) || {}).label || status;
 
   return (
     <div style={S.page}>
@@ -112,8 +145,7 @@ function CandidatesTool() {
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Bulk Import</a>
           <a href="/admin/discovery" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Discovery</a>
-          <button style={{ ...S.btnSecondary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("discover")}>{running === "discover" ? "Running..." : "Run discovery"}</button>
-          <button style={{ ...S.btnPrimary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("ingest")}>{running === "ingest" ? "Running..." : "Run ingestion"}</button>
+          <button style={{ ...S.btnSecondary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={runDiscover}>{running === "discover" ? "Running..." : "Run discovery"}</button>
         </div>
       </div>
       {progress && (
@@ -122,25 +154,25 @@ function CandidatesTool() {
 
       <div style={S.container}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          {STATUSES.map((st) => (
-            <button key={st} style={S.tab(status === st)} onClick={() => setStatus(st)}>
-              {st}{counts[st] != null ? ` (${counts[st]})` : ""}
+          {TABS.map((t) => (
+            <button key={t.key} style={S.tab(status === t.key)} onClick={() => setStatus(t.key)}>
+              {t.label}{counts[t.key] != null ? ` (${counts[t.key]})` : ""}
             </button>
           ))}
         </div>
 
         {status === "discovered" && candidates.length > 0 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-            <button style={S.btnGreen} onClick={() => act([...selected], "approve")} disabled={selected.size === 0}>Approve selected ({selected.size})</button>
-            <button style={S.btnRed} onClick={() => act([...selected], "reject")} disabled={selected.size === 0}>Reject selected</button>
+            <button style={{ ...S.btnPrimary, opacity: selected.size === 0 || running ? 0.6 : 1 }} disabled={selected.size === 0 || !!running} onClick={() => scrapeMany([...selected], "queue")}>Scrape selected ({selected.size})</button>
+            <button style={S.btnRed} onClick={() => reject([...selected])} disabled={selected.size === 0 || !!running}>Reject selected</button>
             <button style={S.btnSecondary} onClick={() => setSelected(new Set(candidates.map((c) => c.id)))}>Select all</button>
             <button style={S.btnSecondary} onClick={() => setSelected(new Set())}>Clear</button>
           </div>
         )}
 
-        {status === "failed" && candidates.length > 0 && (
+        {(status === "ingested" || status === "failed") && candidates.length > 0 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-            <button style={S.btnGreen} onClick={() => act([...selected], "retry")} disabled={selected.size === 0}>Retry selected ({selected.size})</button>
+            <button style={{ ...S.btnPrimary, opacity: selected.size === 0 || running ? 0.6 : 1 }} disabled={selected.size === 0 || !!running} onClick={() => scrapeMany([...selected], "rescrape")}>Re-scrape selected ({selected.size})</button>
             <button style={S.btnSecondary} onClick={() => setSelected(new Set(candidates.map((c) => c.id)))}>Select all</button>
             <button style={S.btnSecondary} onClick={() => setSelected(new Set())}>Clear</button>
           </div>
@@ -149,13 +181,13 @@ function CandidatesTool() {
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>Loading...</div>
         ) : candidates.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>No {status} candidates.</div>
+          <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>No {currentLabel} candidates.</div>
         ) : (
           candidates.map((c) => (
             <div key={c.id} style={S.card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                 <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 0 }}>
-                  {(status === "discovered" || status === "failed") && (
+                  {selectable && (
                     <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ marginTop: 4 }} />
                   )}
                   <div style={{ minWidth: 0 }}>
@@ -173,22 +205,24 @@ function CandidatesTool() {
                     </div>
                     <a href={c.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#2563eb", wordBreak: "break-all" }}>{c.url}</a>
                     {c.notes && <div style={{ fontSize: 12, color: "#ef4444", marginTop: 6 }}>{c.notes}</div>}
-                    {c.tier_used && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>tier: {c.tier_used}</div>}
                   </div>
                 </div>
                 {status === "discovered" && (
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    <button style={S.btnGreen} onClick={() => act([c.id], "approve")}>Approve</button>
-                    <button style={S.btnRed} onClick={() => act([c.id], "reject")}>Reject</button>
+                    <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "queue")}>Scrape</button>
+                    <button style={S.btnRed} disabled={!!running} onClick={() => reject([c.id])}>Reject</button>
                   </div>
                 )}
-                {status === "failed" && (
+                {(status === "ingested" || status === "failed") && (
                   <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                    <button style={S.btnGreen} onClick={() => act([c.id], "retry")}>Retry</button>
+                    <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "rescrape")}>Re-scrape</button>
                   </div>
                 )}
-                {status !== "discovered" && status !== "failed" && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{c.status}</span>
+                {status === "all" && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
+                )}
+                {status === "rejected" && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
                 )}
               </div>
             </div>
@@ -197,7 +231,7 @@ function CandidatesTool() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.type === "error" ? "#ef4444" : toast.type === "success" ? "#16a34a" : "#374151", color: "#fff", padding: "12px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>{toast.msg}</div>
+        <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.type === "error" ? "#ef4444" : toast.type === "success" ? "#16a34a" : "#374151", color: "#fff", padding: "12px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.2)", maxWidth: 420 }}>{toast.msg}</div>
       )}
     </div>
   );

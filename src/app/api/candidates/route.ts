@@ -31,23 +31,24 @@ export async function PATCH(req: NextRequest) {
   if (!Array.isArray(ids) || ids.length === 0) {
     return NextResponse.json({ error: "ids array required" }, { status: 400 });
   }
-  if (!["approve", "reject", "retry"].includes(action)) {
-    return NextResponse.json({ error: "action must be approve, reject, or retry" }, { status: 400 });
+  if (!["queue", "reject", "rescrape"].includes(action)) {
+    return NextResponse.json({ error: "action must be queue, reject, or rescrape" }, { status: 400 });
   }
 
-  // approve/reject act on still-pending (discovered) rows; retry re-queues
-  // failed rows back to approved (clearing the old failure note) so ingestion
-  // picks them up again.
-  const fromStatus = action === "retry" ? "failed" : "discovered";
+  // queue: move discovered candidates into the internal scrape queue.
+  // reject: discard discovered candidates.
+  // rescrape: re-queue already-drafted or failed candidates to be scraped again
+  // (writeConference dedupes by source URL, so the existing draft is replaced).
+  const fromStatuses = action === "rescrape" ? ["ingested", "failed"] : ["discovered"];
   const toStatus = action === "reject" ? "rejected" : "approved";
   const patch: Record<string, unknown> = { status: toStatus, updated_at: new Date().toISOString() };
-  if (action === "retry") { patch.notes = null; patch.tier_used = null; }
+  if (action === "rescrape") { patch.notes = null; patch.tier_used = null; }
 
   const { error, count } = await supabaseAdmin
     .from("discovery_queue")
     .update(patch, { count: "exact" })
     .in("id", ids)
-    .eq("status", fromStatus);
+    .in("status", fromStatuses);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, updated: count ?? 0, status: toStatus });
