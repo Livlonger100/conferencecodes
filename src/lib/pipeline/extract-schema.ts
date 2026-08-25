@@ -72,6 +72,14 @@ function isSaneDate(d: string | null): boolean {
   return year >= 2024 && year <= 2032;
 }
 
+// Keep a tier date only if it is a sane, in-range date; otherwise drop it to
+// null. A malformed or out-of-range tier date must not fail the whole conference.
+function saneTierDate(d: any): string | null {
+  if (!d) return null;
+  const s = String(d);
+  return isSaneDate(s) ? s : null;
+}
+
 // Coerce a loose extracted object into our ExtractedConference shape.
 export function normalizeExtraction(raw: any): ExtractedConference | null {
   if (!raw || typeof raw !== "object") return null;
@@ -81,9 +89,10 @@ export function normalizeExtraction(raw: any): ExtractedConference | null {
     price: typeof t?.price === "number" ? t.price : (t?.price == null ? null : Number(t.price)) ,
     currency: resolveCurrency(t?.currency),
     is_early_bird: !!t?.is_early_bird,
-    early_bird_start: t?.early_bird_start || null,
-    early_bird_end: t?.early_bird_end || null,
-    deadline: t?.deadline || null,
+    // Drop bad/out-of-range tier dates to null instead of failing ingestion.
+    early_bird_start: saneTierDate(t?.early_bird_start),
+    early_bird_end: saneTierDate(t?.early_bird_end),
+    deadline: saneTierDate(t?.deadline),
   }));
   return {
     title: String(raw.title ?? "").trim(),
@@ -113,14 +122,14 @@ export function validateExtraction(c: ExtractedConference | null): string[] {
     errors.push("end_date before start_date");
   }
 
+  // Only fail on pricing when there is no usable pricing at all. Individual bad
+  // tier dates were already dropped to null in normalizeExtraction, so they do
+  // not fail the conference.
   const priced = c.pricing_tiers.filter((t) => t.price != null && !Number.isNaN(t.price));
   if (priced.length === 0) errors.push("no pricing tier with a numeric price");
   for (const t of priced) {
     if (Number.isNaN(t.price as number)) errors.push(`tier "${t.name}" has a non-numeric price`);
     if (!t.currency) errors.push(`tier "${t.name}" has an unresolved currency`);
-    if (!isSaneDate(t.early_bird_start)) errors.push(`tier "${t.name}" early_bird_start out of range`);
-    if (!isSaneDate(t.early_bird_end)) errors.push(`tier "${t.name}" early_bird_end out of range`);
-    if (!isSaneDate(t.deadline)) errors.push(`tier "${t.name}" deadline out of range`);
   }
 
   return errors;
