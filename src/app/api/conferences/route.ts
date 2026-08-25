@@ -1,5 +1,17 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { makeSlug } from "@/lib/slug";
 import { NextRequest, NextResponse } from "next/server";
+
+// Ensure a generated slug is unique (append numeric suffix on collision).
+async function ensureUniqueSlug(base: string): Promise<string> {
+  let slug = base;
+  for (let n = 2; n <= 50; n++) {
+    const { data } = await supabaseAdmin.from("conferences").select("id").eq("slug", slug).maybeSingle();
+    if (!data) return slug;
+    slug = `${base}-${n}`;
+  }
+  return `${base}-${Date.now().toString(36).slice(-4)}`;
+}
 
 // GET all conferences with pricing tiers and hotels
 export async function GET() {
@@ -16,6 +28,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { id: _id, pricing, hotels, ...conf } = body;
+
+  // Generate a clean slug in the app unless one was supplied.
+  if (!conf.slug && conf.name) {
+    conf.slug = await ensureUniqueSlug(makeSlug(conf.name, conf.start_date));
+  }
 
   // Insert conference
   const { data: created, error } = await supabaseAdmin

@@ -2,7 +2,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase";
-import { transformConference } from "@/lib/conference-utils";
+import { transformConference, formatDateRange } from "@/lib/conference-utils";
 import ConferenceDetailClient from "./ConferenceDetailClient";
 
 const BASE_URL = "https://conferencecodes.com";
@@ -37,19 +37,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await getConference(slug);
-  if (!data) return { title: "Conference Not Found | ConferenceCodes" };
+  if (!data) return { title: "Conference Not Found | ConferenceCodes", robots: { index: false, follow: false } };
 
   const conf = transformConference(data);
-  const title = `${conf.name} ${new Date(conf.start).getFullYear()}: Tickets, Pricing & Discount Codes | ConferenceCodes`;
-  const description =
-    conf.description.length > 155
-      ? conf.description.slice(0, 152) + "..."
-      : conf.description;
+
+  // Only append the year when the name does not already contain it.
+  const year = new Date(conf.start).getFullYear();
+  const titleName = Number.isFinite(year) && !conf.name.includes(String(year)) ? `${conf.name} ${year}` : conf.name;
+  const title = `${titleName}: Tickets, Pricing & Discount Codes | ConferenceCodes`;
+
+  // Fallback description so no detail page is left with an empty meta description.
+  const rawDesc = (conf.description || "").trim();
+  const location = [conf.city, conf.country].filter(Boolean).join(", ");
+  const dateRange = conf.start ? formatDateRange(conf.start, conf.end) : "";
+  const fallbackDesc = `Discount codes, pricing, and dates for ${conf.name}${location ? ` in ${location}` : ""}.${dateRange ? ` ${dateRange}.` : ""}`;
+  const baseDesc = rawDesc || fallbackDesc;
+  const description = baseDesc.length > 155 ? baseDesc.slice(0, 152) + "..." : baseDesc;
+
   const url = `${BASE_URL}/conference/${conf.slug}`;
+  // Only live listings (active or sold out) should be indexable.
+  const indexable = conf.status === "active" || conf.status === "sold_out";
 
   return {
     title,
     description,
+    robots: { index: indexable, follow: true, googleBot: { index: indexable, follow: true } },
     openGraph: {
       title: `${conf.name}: Verified Pricing & Exclusive Discount Codes`,
       description,
@@ -112,7 +124,10 @@ export default async function ConferencePage({
       offers: {
         "@type": "Offer",
         price: conf.earlyBird ?? conf.price,
-        priceCurrency: "USD",
+        priceCurrency:
+          conf.pricingTiers?.find((t: any) => t.price != null)?.currency ||
+          conf.pricingTiers?.[0]?.currency ||
+          "USD",
         url: `${BASE_URL}/conference/${conf.slug}`,
         availability: "https://schema.org/InStock",
       },

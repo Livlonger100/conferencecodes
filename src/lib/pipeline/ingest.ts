@@ -17,6 +17,7 @@ import {
   validateExtraction,
 } from "./extract-schema";
 import { assessCompleteness, detectPricingSignals } from "./completeness";
+import { makeSlug } from "@/lib/slug";
 import type { JobLogger } from "./log";
 import type { Candidate, Completeness, ExtractedConference, ExtractionResult, ExtractedTier, ExtractionMeta } from "./types";
 
@@ -205,6 +206,18 @@ function regionFromCountry(country: string | null | undefined): string {
   return "Other";
 }
 
+// Ensure a generated slug does not collide with an existing conference. Appends
+// a numeric suffix if needed. Existing rows keep their slug (never rewritten).
+async function ensureUniqueSlug(base: string): Promise<string> {
+  let slug = base;
+  for (let n = 2; n <= 50; n++) {
+    const { data } = await supabaseAdmin.from("conferences").select("id").eq("slug", slug).maybeSingle();
+    if (!data) return slug;
+    slug = `${base}-${n}`;
+  }
+  return `${base}-${Date.now().toString(36).slice(-4)}`;
+}
+
 function computeNextRecrawl(data: ExtractedConference): string {
   const now = Date.now();
   const dayMs = 86400000;
@@ -275,9 +288,12 @@ export async function writeConference(
     conferenceId = existing.id;
     logger.info("conference.updated", { id: conferenceId, name: data.title });
   } else {
+    // Generate a clean slug in the app (year not doubled, length capped) and
+    // ensure it is unique. Only on insert; existing slugs are never rewritten.
+    const slug = await ensureUniqueSlug(makeSlug(data.title, data.start_date));
     const { data: created, error } = await supabaseAdmin
       .from("conferences")
-      .insert(confRow)
+      .insert({ ...confRow, slug })
       .select("id")
       .single();
     if (error) throw new Error(`conference insert failed: ${error.message}`);
