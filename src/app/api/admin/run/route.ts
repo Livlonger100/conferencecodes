@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, result, log: logger.summary() });
     }
     if (job === "ingest") {
-      const result = await runIngestBatch(logger);
+      // ?id=<candidate id> scrapes just that one queued candidate.
+      const onlyId = url.searchParams.get("id");
+      const result = await runIngestBatch(logger, onlyId ? { onlyId } : {});
       return NextResponse.json({ ok: true, result, log: logger.summary() });
     }
     return NextResponse.json({ error: "unknown job (use ?job=discover|ingest|cleanup)" }, { status: 400 });

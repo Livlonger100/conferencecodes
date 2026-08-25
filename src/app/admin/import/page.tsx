@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 
 // Bulk URL import. Paste conference URLs, one click dedupes and queues the new
-// ones as approved candidates, then one clearly-labeled ingestion button drains
-// the approved queue with live progress and a completion summary. Everything
-// still feeds the existing review/publish gate. Uses the existing admin login.
+// ones, then a Scrape button scrapes them into drafts with live progress and a
+// completion summary. Everything still feeds the review/publish gate. Uses the
+// existing admin login.
 
 const S = {
   page: { minHeight: "100vh", background: "#f8f9fa", color: "#374151", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
@@ -52,29 +52,29 @@ function ImportTool({ onAuthError }) {
     finally { setBusy(null); }
   };
 
-  // Drain the approved queue in batches, showing live progress + a final summary.
-  const ingestAll = async () => {
-    setBusy("ingest");
-    let ingested = 0, failed = 0, remaining = null;
-    setIngest({ running: true, ingested, failed, remaining: null, done: false });
+  // Scrape the queued candidates in batches, showing live progress + a summary.
+  const scrapeAll = async () => {
+    setBusy("scrape");
+    let drafted = 0, failed = 0, remaining = null;
+    setIngest({ running: true, drafted, failed, remaining: null, done: false });
     try {
       for (let round = 0; round < MAX_ROUNDS; round++) {
         const res = await fetch("/api/admin/run?job=ingest", { method: "POST" });
         if (res.status === 401) { onAuthError(); return; }
         const data = await res.json();
-        if (!res.ok) { showToast(data.error || "Ingestion failed", true); break; }
+        if (!res.ok) { showToast(data.error || "Scrape failed", true); break; }
         const r = data.result || {};
         const results = r.results || [];
-        ingested += results.filter((x) => x.status === "ingested").length;
+        drafted += results.filter((x) => x.status === "ingested").length;
         failed += results.filter((x) => x.status === "failed").length;
         remaining = r.remainingApproved ?? 0;
-        setIngest({ running: true, ingested, failed, remaining, done: false });
+        setIngest({ running: true, drafted, failed, remaining, done: false });
         if (remaining === 0 || (r.processed ?? 0) === 0) break;
       }
-      setIngest({ running: false, ingested, failed, remaining: remaining ?? 0, done: true });
-      showToast(`Ingestion complete. ${ingested} scraped into drafts, ${failed} failed.`);
+      setIngest({ running: false, drafted, failed, remaining: remaining ?? 0, done: true });
+      showToast(`Scraping complete. ${drafted} drafted, ${failed} failed.`);
     } catch (e) {
-      showToast("Ingestion request failed", true);
+      showToast("Scrape request failed", true);
       setIngest((s) => (s ? { ...s, running: false, done: true } : null));
     } finally { setBusy(null); }
   };
@@ -125,19 +125,19 @@ function ImportTool({ onAuthError }) {
           </div>
         )}
 
-        {/* Step 2: ingest with visible progress */}
+        {/* Step 2: scrape queued candidates with visible progress */}
         <div style={S.card}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 4 }}>2. Ingest approved candidates</div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>Runs Firecrawl pricing extraction on every approved candidate (these plus any already approved), in batches, into drafts. This can take a minute or two. Leave this tab open.</div>
-          <button style={{ ...S.btnGreen, opacity: busy ? 0.6 : 1 }} disabled={!!busy} onClick={ingestAll}>{busy === "ingest" ? "Ingesting..." : "Run ingestion now"}</button>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 4 }}>2. Scrape queued candidates</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>Scrapes every queued candidate into drafts, in batches. This can take a minute or two. Leave this tab open.</div>
+          <button style={{ ...S.btnGreen, opacity: busy ? 0.6 : 1 }} disabled={!!busy} onClick={scrapeAll}>{busy === "scrape" ? "Scraping..." : "Scrape now"}</button>
 
           {ingest && (
             <div style={{ marginTop: 14, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: ingest.done ? "#16a34a" : "#f97316", marginBottom: 6 }}>
-                {ingest.running ? "Ingesting..." : "Ingestion complete"}
+                {ingest.running ? "Scraping..." : "Scraping complete"}
               </div>
               <div style={{ fontSize: 13, color: "#374151" }}>
-                {ingest.ingested} scraped into drafts, {ingest.failed} failed{ingest.remaining != null ? `, ${ingest.remaining} approved remaining` : ""}.
+                {ingest.drafted} drafted, {ingest.failed} failed{ingest.remaining != null ? `, ${ingest.remaining} remaining` : ""}.
               </div>
               {ingest.done && (
                 <a href="/admin" style={{ ...S.btnSecondary, display: "inline-block", textDecoration: "none", marginTop: 12 }}>Review drafts in admin</a>
