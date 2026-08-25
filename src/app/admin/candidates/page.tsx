@@ -40,6 +40,9 @@ function CandidatesTool() {
   const [toast, setToast] = useState(null);
   const [running, setRunning] = useState(null);
   const [progress, setProgress] = useState(null);
+  const [scrapingId, setScrapingId] = useState(null); // row currently scraping
+  const [rowResults, setRowResults] = useState({}); // { [id]: { kind: "drafted"|"failed", reason? } }
+  const [bulkResult, setBulkResult] = useState(null); // { drafted, failed } persistent summary
 
   const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast(null), 5000); };
   const sessionExpired = () => { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); setRunning(null); };
@@ -55,6 +58,18 @@ function CandidatesTool() {
     } catch (e) { showToast("Failed to load candidates", "error"); }
     setLoading(false);
   };
+
+  // Refresh only the tab counts (not the visible list), so per-row results stay
+  // on screen while the Discovered/Drafted/Failed numbers update immediately.
+  const refreshCounts = async () => {
+    try {
+      const res = await fetch(`/api/candidates?status=${status}`);
+      if (res.ok) { const data = await res.json(); setCounts(data.counts || {}); }
+    } catch (e) { /* keep last counts */ }
+  };
+
+  // Switch tab and clear any persistent per-row / bulk results from the old tab.
+  const goTo = (st) => { if (st === status) return; setRowResults({}); setBulkResult(null); setStatus(st); };
 
   useEffect(() => { load(status); /* eslint-disable-next-line */ }, [status]);
 
@@ -78,6 +93,7 @@ function CandidatesTool() {
   const scrapeMany = async (ids, action) => {
     if (!ids.length) return;
     setRunning("scrape");
+    setBulkResult(null);
     try {
       const q = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, action }) });
       if (q.status === 401) return sessionExpired();
@@ -98,27 +114,50 @@ function CandidatesTool() {
         if (remaining === 0 || (r.processed ?? 0) === 0) break;
       }
       setProgress(null);
-      showToast(`Scraping complete. ${drafted} drafted, ${failed} failed.`, "success");
-      load(status);
+      await load(status);
+      setBulkResult({ drafted, failed });
     } catch (e) { setProgress(null); showToast("Scrape request failed", "error"); }
     setRunning(null);
   };
 
-  // Scrape a single candidate (scoped by id, does not drain others).
+  // Scrape a single candidate (scoped by id, does not drain others). Records a
+  // persistent result on the row (Drafted or Failed) and refreshes tab counts.
   const scrapeOne = async (id, action) => {
+    setScrapingId(id);
     setRunning("scrape");
+    setRowResults((m) => { const n = { ...m }; delete n[id]; return n; });
     try {
       const q = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id], action }) });
       if (q.status === 401) return sessionExpired();
       const res = await fetch(`/api/admin/run?job=ingest&id=${id}`, { method: "POST" });
       if (res.status === 401) return sessionExpired();
       const data = await res.json();
-      const r0 = (data.result?.results || [])[0];
-      if (res.ok) showToast(r0?.status === "failed" ? `Failed: ${r0.reason || "no pricing found"}` : "Drafted", r0?.status === "failed" ? "error" : "success");
-      else showToast(data.error || "Scrape failed", "error");
-      load(status);
-    } catch (e) { showToast("Scrape request failed", "error"); }
-    setRunning(null);
+      if (!res.ok) {
+        setRowResults((m) => ({ ...m, [id]: { kind: "failed", reason: data.error || "scrape failed" } }));
+      } else {
+        const r0 = (data.result?.results || [])[0];
+        if (r0?.status === "failed") setRowResults((m) => ({ ...m, [id]: { kind: "failed", reason: r0.reason || "no grounded pricing found" } }));
+        else setRowResults((m) => ({ ...m, [id]: { kind: "drafted" } }));
+      }
+      await refreshCounts();
+    } catch (e) {
+      setRowResults((m) => ({ ...m, [id]: { kind: "failed", reason: "request failed" } }));
+    } finally { setScrapingId(null); setRunning(null); }
+  };
+
+  // Persistent per-row result badge shown after a per-row scrape completes.
+  const RowResult = ({ id }) => {
+    const r = rowResults[id];
+    if (!r) return null;
+    if (r.kind === "drafted") return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#16a34a", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", padding: "5px 10px", borderRadius: 6 }}>Drafted</span>
+        <a href="/admin" style={{ fontSize: 12, fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>Review draft</a>
+      </div>
+    );
+    return (
+      <span style={{ fontSize: 12, fontWeight: 600, color: "#ef4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", padding: "5px 10px", borderRadius: 6, flexShrink: 0, maxWidth: 260 }}>Failed: {r.reason}</span>
+    );
   };
 
   const selectable = status === "discovered" || status === "ingested" || status === "failed";
@@ -142,11 +181,21 @@ function CandidatesTool() {
       <div style={S.container}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           {TABS.map((t) => (
-            <button key={t.key} style={S.tab(status === t.key)} onClick={() => setStatus(t.key)}>
+            <button key={t.key} style={S.tab(status === t.key)} onClick={() => goTo(t.key)}>
               {t.label}{counts[t.key] != null ? ` (${counts[t.key]})` : ""}
             </button>
           ))}
         </div>
+
+        {bulkResult && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "#f0fdf4", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Scraping complete. {bulkResult.drafted} drafted, {bulkResult.failed} failed.</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button style={S.btnSecondary} onClick={() => goTo("ingested")}>View drafts</button>
+              <button style={{ ...S.btnSecondary, background: "transparent", border: "none", color: "#6b7280" }} onClick={() => setBulkResult(null)}>Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {status === "discovered" && candidates.length > 0 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
@@ -195,15 +244,19 @@ function CandidatesTool() {
                   </div>
                 </div>
                 {status === "discovered" && (
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "queue")}>Scrape</button>
-                    <button style={S.btnRed} disabled={!!running} onClick={() => reject([c.id])}>Reject</button>
-                  </div>
+                  rowResults[c.id] ? <RowResult id={c.id} /> : (
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "queue")}>{scrapingId === c.id ? "Scraping..." : "Scrape"}</button>
+                      <button style={S.btnRed} disabled={!!running} onClick={() => reject([c.id])}>Reject</button>
+                    </div>
+                  )
                 )}
                 {(status === "ingested" || status === "failed") && (
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                    <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "rescrape")}>Re-scrape</button>
-                  </div>
+                  rowResults[c.id] ? <RowResult id={c.id} /> : (
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                      <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "rescrape")}>{scrapingId === c.id ? "Re-scraping..." : "Re-scrape"}</button>
+                    </div>
+                  )
                 )}
                 {status === "all" && (
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
