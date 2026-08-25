@@ -79,6 +79,7 @@ export function formatDateRange(startStr: string, endStr: string): string {
 }
 
 export function formatPrice(p: number | null): string {
+  if (p === 0) return "Free";
   return p != null ? "$" + p.toLocaleString() : "TBA";
 }
 

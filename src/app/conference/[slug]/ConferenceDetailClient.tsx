@@ -18,6 +18,7 @@ function getCategoryStyle(category) {
 // Currency-aware price formatter (falls back to "TBA" when price is unknown)
 function formatMoney(price, currency = "USD") {
   if (price == null) return "TBA";
+  if (Number(price) === 0) return "Free";
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -148,14 +149,11 @@ function ConferenceDetail({ conf, onBack }) {
                           : (tier.isEarlyBird ? `Early bird deadline: ${formatDate(tier.deadline)}, ${daysLeft}d left` : `Price increases after ${formatDate(tier.deadline)}, ${daysLeft}d left`)}
                       </div>
                     )}
-                    {tier.priceAfterDeadline && !deadlinePassed && (
-                      <div style={{ fontSize: 11, color: "var(--cc-gold-dk)", marginTop: 2 }}>Rises to {formatMoney(tier.priceAfterDeadline, tier.currency)} after deadline</div>
-                    )}
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 22, fontWeight: 700, color: isCurrent ? "var(--cc-gold-dk)" : expired ? "var(--cc-muted)" : "var(--cc-ink)" }}>{formatMoney(tier.price, tier.currency)}</div>
-                    {tier.priceAfterDeadline && !deadlinePassed && (
-                      <div style={{ fontSize: 12, color: "var(--cc-muted)", textDecoration: "line-through" }}>{formatMoney(tier.priceAfterDeadline, tier.currency)}</div>
+                    {tier.priceAfterDeadline != null && !deadlinePassed && (
+                      <div style={{ fontSize: 12, color: "var(--cc-muted)", marginTop: 2 }}>then {formatMoney(tier.priceAfterDeadline, tier.currency)}</div>
                     )}
                   </div>
                 </div>
