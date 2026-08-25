@@ -55,7 +55,8 @@ function CandidatesTool() {
       body: JSON.stringify({ ids, action }),
     });
     const data = await res.json();
-    if (res.ok) { showToast(`${action === "approve" ? "Approved" : "Rejected"} ${data.updated}`, "success"); load(status); }
+    const label = action === "approve" ? "Approved" : action === "reject" ? "Rejected" : "Requeued for ingestion";
+    if (res.ok) { showToast(`${label}: ${data.updated}`, "success"); load(status); }
     else showToast(data.error || "Action failed", "error");
   };
 
@@ -137,6 +138,14 @@ function CandidatesTool() {
           </div>
         )}
 
+        {status === "failed" && candidates.length > 0 && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+            <button style={S.btnGreen} onClick={() => act([...selected], "retry")} disabled={selected.size === 0}>Retry selected ({selected.size})</button>
+            <button style={S.btnSecondary} onClick={() => setSelected(new Set(candidates.map((c) => c.id)))}>Select all</button>
+            <button style={S.btnSecondary} onClick={() => setSelected(new Set())}>Clear</button>
+          </div>
+        )}
+
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>Loading...</div>
         ) : candidates.length === 0 ? (
@@ -146,7 +155,7 @@ function CandidatesTool() {
             <div key={c.id} style={S.card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                 <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 0 }}>
-                  {status === "discovered" && (
+                  {(status === "discovered" || status === "failed") && (
                     <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ marginTop: 4 }} />
                   )}
                   <div style={{ minWidth: 0 }}>
@@ -173,7 +182,12 @@ function CandidatesTool() {
                     <button style={S.btnRed} onClick={() => act([c.id], "reject")}>Reject</button>
                   </div>
                 )}
-                {status !== "discovered" && (
+                {status === "failed" && (
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                    <button style={S.btnGreen} onClick={() => act([c.id], "retry")}>Retry</button>
+                  </div>
+                )}
+                {status !== "discovered" && status !== "failed" && (
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{c.status}</span>
                 )}
               </div>
