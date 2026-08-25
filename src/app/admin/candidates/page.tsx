@@ -121,18 +121,6 @@ function CandidatesTool() {
     setRunning(null);
   };
 
-  const runDiscover = async () => {
-    setRunning("discover");
-    try {
-      const res = await fetch(`/api/admin/run?job=discover`, { method: "POST" });
-      if (res.status === 401) return sessionExpired();
-      const data = await res.json();
-      if (res.ok) { showToast("Discovery run complete", "success"); load(status); }
-      else showToast(data.error || "Discovery failed", "error");
-    } catch (e) { showToast("Discovery request failed", "error"); }
-    setRunning(null);
-  };
-
   const selectable = status === "discovered" || status === "ingested" || status === "failed";
   const currentLabel = (TABS.find((t) => t.key === status) || {}).label || status;
 
@@ -144,8 +132,7 @@ function CandidatesTool() {
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Bulk Import</a>
-          <a href="/admin/discovery" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Discovery</a>
-          <button style={{ ...S.btnSecondary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={runDiscover}>{running === "discover" ? "Running..." : "Run discovery"}</button>
+          <a href="/admin/discovery" style={{ ...S.btnPrimary, textDecoration: "none", display: "inline-block" }}>Search discovery</a>
         </div>
       </div>
       {progress && (
