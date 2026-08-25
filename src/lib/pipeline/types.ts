@@ -75,6 +75,8 @@ export interface ExtractionMeta {
   proxyUsed: string; // "basic" | "stealth" | "none"
   firecrawlCalls: number;
   stealthUsed: boolean;
+  pricingUrl: string | null; // page pricing actually came from (may differ from the official URL)
+  pricingTried: string[]; // pricing-page URLs attempted when the given URL had none
 }
 
 export interface ExtractionResult {

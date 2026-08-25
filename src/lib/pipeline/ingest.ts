@@ -8,7 +8,7 @@ import {
   nextRecrawlDays,
 } from "./config";
 import { callClaude, parseJsonLoose, textFromResponse } from "./claude";
-import { firecrawlExtract } from "./firecrawl";
+import { firecrawlScrape, firecrawlMap } from "./firecrawl";
 import {
   EXTRACTION_JSON_SCHEMA,
   EXTRACTION_SYSTEM,
@@ -71,22 +71,114 @@ async function extractBaseFields(
   return { base: parsed, pageText };
 }
 
-// ---- Pricing: ALWAYS Firecrawl (renders JS) --------------------------------
-// Normal fetch first; escalate to stealth once if no usable pricing; then stop.
-// Firecrawl also returns base fields, used only as a fallback for the cheap fetch.
-async function extractPricing(
-  url: string,
-  logger: JobLogger
-): Promise<{ data: ExtractedConference | null; proxyUsed: string }> {
-  const result = await firecrawlExtract({
-    url,
-    schema: EXTRACTION_JSON_SCHEMA,
-    logger,
-    escalateToStealth: FIRECRAWL_ESCALATE_TO_STEALTH,
-    hasUsableData: hasUsablePricing,
-  });
-  logger.info("pricing.firecrawl_done", { url, proxyUsed: result.proxyUsed });
-  return { data: normalizeExtraction(result.json), proxyUsed: result.proxyUsed };
+// ---- Pricing: Firecrawl, finding the tickets/pricing page if needed --------
+// Cheap-first: scrape the given URL; if it has no numeric pricing, follow its
+// links to a tickets/pricing page; if that fails, use Firecrawl /map; finally
+// try stealth on the given URL. Stops as soon as usable pricing is found.
+
+const PRICING_KEYWORDS = ["tickets", "ticket", "registration", "register", "pricing", "prices", "passes", "pass", "book", "buy", "rates", "fees"];
+const STRONG_KEYWORDS = new Set(["tickets", "ticket", "registration", "register", "pricing", "prices"]);
+
+function hostOf(u: string): string {
+  try { return new URL(u).host.replace(/^www\./, "").toLowerCase(); } catch { return ""; }
+}
+
+// Rank links by pricing-keyword match in the href, preferring same-domain pages.
+function rankPricingLinks(links: string[], baseUrl: string): string[] {
+  const baseHost = hostOf(baseUrl);
+  const baseClean = baseUrl.replace(/\/+$/, "");
+  const seen = new Set<string>();
+  const scored: { url: string; score: number }[] = [];
+  for (const raw of links || []) {
+    if (!raw || typeof raw !== "string") continue;
+    if (raw.startsWith("#") || raw.startsWith("mailto:") || raw.startsWith("tel:")) continue;
+    let abs: string;
+    try { abs = new URL(raw, baseUrl).href.split("#")[0]; } catch { continue; }
+    if (!/^https?:\/\//i.test(abs)) continue;
+    if (abs.replace(/\/+$/, "") === baseClean) continue; // skip self
+    if (seen.has(abs)) continue;
+    const lower = abs.toLowerCase();
+    let score = 0;
+    for (const kw of PRICING_KEYWORDS) if (lower.includes(kw)) score += STRONG_KEYWORDS.has(kw) ? 3 : 1;
+    if (score === 0) continue;
+    if (hostOf(abs) === baseHost) score += 5;
+    seen.add(abs);
+    scored.push({ url: abs, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.url.length - b.url.length);
+  return scored.map((s) => s.url);
+}
+
+interface PricingFind {
+  pricingTiers: ExtractedTier[];
+  baseFromGiven: ExtractedConference | null;
+  pricingUrl: string | null;
+  tried: string[];
+  proxyUsed: string;
+  firecrawlCalls: number;
+}
+
+async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promise<PricingFind> {
+  const schema = EXTRACTION_JSON_SCHEMA;
+  const tried: string[] = [];
+  let calls = 0;
+
+  // 1. The given URL (basic), also fetching its links.
+  tried.push(givenUrl);
+  calls++;
+  const first = await firecrawlScrape({ url: givenUrl, schema, proxy: "basic", withLinks: true, logger });
+  const baseFromGiven = normalizeExtraction(first.json);
+  if (hasUsablePricing(first.json)) {
+    logger.info("pricing.found", { from: "given", url: givenUrl });
+    return { pricingTiers: baseFromGiven?.pricing_tiers ?? [], baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
+  }
+
+  // 2. Link scan: follow the best pricing/tickets links on that page.
+  const linkCands = rankPricingLinks(first.links, givenUrl).slice(0, 2);
+  logger.info("pricing.link_candidates", { url: givenUrl, candidates: linkCands });
+  for (const cand of linkCands) {
+    tried.push(cand);
+    calls++;
+    const c = await firecrawlScrape({ url: cand, schema, proxy: "basic", logger });
+    if (hasUsablePricing(c.json)) {
+      logger.info("pricing.found", { from: "link_scan", url: cand });
+      return { pricingTiers: normalizeExtraction(c.json)?.pricing_tiers ?? [], baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    }
+  }
+
+  // 3. Map fallback: list the site's URLs, pick the best pricing match.
+  logger.info("pricing.map_fallback", { url: givenUrl });
+  calls++;
+  const mapUrls = await firecrawlMap(givenUrl, logger);
+  const mapCands = rankPricingLinks(mapUrls, givenUrl).filter((u) => !tried.includes(u)).slice(0, 2);
+  logger.info("pricing.map_candidates", { url: givenUrl, candidates: mapCands });
+  for (const cand of mapCands) {
+    tried.push(cand);
+    calls++;
+    const c = await firecrawlScrape({ url: cand, schema, proxy: "basic", logger });
+    if (hasUsablePricing(c.json)) {
+      logger.info("pricing.found", { from: "map", url: cand });
+      return { pricingTiers: normalizeExtraction(c.json)?.pricing_tiers ?? [], baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    }
+  }
+
+  // 4. Last resort: stealth on the given URL (for anti-bot pages).
+  if (FIRECRAWL_ESCALATE_TO_STEALTH) {
+    logger.info("pricing.stealth_last_resort", { url: givenUrl });
+    tried.push(`${givenUrl} (stealth)`);
+    calls++;
+    const s = await firecrawlScrape({ url: givenUrl, schema, proxy: "stealth", withLinks: true, logger });
+    if (hasUsablePricing(s.json)) {
+      logger.info("pricing.found", { from: "stealth", url: givenUrl });
+      const sBase = normalizeExtraction(s.json);
+      return { pricingTiers: sBase?.pricing_tiers ?? [], baseFromGiven: sBase ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+    }
+    logger.warn("pricing.none_found", { url: givenUrl, tried });
+    return { pricingTiers: [], baseFromGiven, pricingUrl: null, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+  }
+
+  logger.warn("pricing.none_found", { url: givenUrl, tried });
+  return { pricingTiers: [], baseFromGiven, pricingUrl: null, tried, proxyUsed: "basic", firecrawlCalls: calls };
 }
 
 // ---- Tier 3: future browser-agent tier (STUB, not implemented) -------------
@@ -129,25 +221,27 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
   const signals = detectPricingSignals(cheap.pageText);
   logger.info("pricing.signals", { url, ...signals });
 
-  // Pricing is ALWAYS Firecrawl.
-  let firecrawl: ExtractedConference | null = null;
-  let proxyUsed = "none";
+  // Pricing via Firecrawl, finding the tickets/pricing page if the given URL has none.
+  let pricing: PricingFind;
   try {
-    const fc = await extractPricing(url, logger);
-    firecrawl = fc.data;
-    proxyUsed = fc.proxyUsed;
+    pricing = await findAndExtractPricing(url, logger);
   } catch (e: any) {
-    logger.warn("pricing.firecrawl_threw", { url, error: e?.message });
+    logger.warn("pricing.finder_threw", { url, error: e?.message });
+    pricing = { pricingTiers: [], baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
   }
 
-  const pricingTiers: ExtractedTier[] = firecrawl?.pricing_tiers ?? [];
-  const base = mergeBase(cheap.base, firecrawl);
+  const pricingTiers: ExtractedTier[] = pricing.pricingTiers;
+  const base = mergeBase(cheap.base, pricing.baseFromGiven);
 
-  // Firecrawl call accounting for the review view. basic = 1 call, stealth = the
-  // basic call plus one stealth call, none = Firecrawl failed / not reached.
-  const stealthUsed = proxyUsed === "stealth";
-  const firecrawlCalls = proxyUsed === "stealth" ? 2 : proxyUsed === "basic" ? 1 : 0;
-  const meta: ExtractionMeta = { pricingMethod: "tier2", proxyUsed, firecrawlCalls, stealthUsed };
+  const stealthUsed = pricing.proxyUsed === "stealth";
+  const meta: ExtractionMeta = {
+    pricingMethod: "tier2",
+    proxyUsed: pricing.proxyUsed,
+    firecrawlCalls: pricing.firecrawlCalls,
+    stealthUsed,
+    pricingUrl: pricing.pricingUrl,
+    pricingTried: pricing.tried,
+  };
 
   if (!base) {
     await tier3(url, logger); // final hook; returns null today
@@ -158,11 +252,13 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
   const data: ExtractedConference = { ...base, pricing_tiers: pricingTiers };
   const errors = validateExtraction(data);
   const completeness = assessCompleteness({ pricingMethod: "tier2", tiers: pricingTiers, signals });
-  logger.info("pricing.method", { url, method: "tier2", proxyUsed, firecrawlCalls, stealthUsed, tiers: pricingTiers.length, confidence: completeness.score, likelyIncomplete: completeness.likelyIncomplete });
+  logger.info("pricing.method", { url, method: "tier2", proxyUsed: pricing.proxyUsed, firecrawlCalls: pricing.firecrawlCalls, pricingUrl: pricing.pricingUrl, tiers: pricingTiers.length, confidence: completeness.score, likelyIncomplete: completeness.likelyIncomplete });
 
   if (errors.length) {
-    logger.info("extraction.invalid", { url, errors });
-    return { ok: false, tier: "tier2", data: null, errors, completeness, meta };
+    // When no pricing page worked, record which pages were tried so it is visible.
+    const finalErrors = pricing.pricingUrl ? errors : [...errors, `pricing pages tried: ${pricing.tried.join(", ")}`];
+    logger.info("extraction.invalid", { url, errors: finalErrors });
+    return { ok: false, tier: "tier2", data: null, errors: finalErrors, completeness, meta };
   }
   logger.info("extraction.valid", { url, note: completeness.note });
   return { ok: true, tier: "tier2", data, errors: [], completeness, meta };
@@ -254,6 +350,10 @@ export async function writeConference(
       ? ` | DATE: starts beyond the ${DISCOVERY_WINDOW_MONTHS}-month window, held as archived (not publishable)`
       : "";
   const fcSummary = `Firecrawl ${meta.extraction.firecrawlCalls} call${meta.extraction.firecrawlCalls === 1 ? "" : "s"}${meta.extraction.stealthUsed ? ", stealth" : ""}`;
+  const pricingSrc =
+    meta.extraction.pricingUrl && meta.extraction.pricingUrl !== data.official_url
+      ? ` | pricing from ${meta.extraction.pricingUrl}`
+      : "";
   const confRow: Record<string, unknown> = {
     name: data.title,
     description: data.description,
@@ -267,7 +367,7 @@ export async function writeConference(
     region: regionFromCountry(data.country),
     source_url: data.official_url,
     registration_url: data.official_url,
-    extraction_notes: `${meta.completeness.note} | pricing: ${fcSummary}${dateNote} | candidate ${meta.sourceCandidate.id}`,
+    extraction_notes: `${meta.completeness.note} | pricing: ${fcSummary}${pricingSrc}${dateNote} | candidate ${meta.sourceCandidate.id}`,
     next_recrawl_at: nextRecrawl,
     updated_at: new Date().toISOString(),
   };
