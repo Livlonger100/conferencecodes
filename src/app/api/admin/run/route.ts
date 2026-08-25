@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminAuth } from "@/lib/admin-auth";
 import { JobLogger } from "@/lib/pipeline/log";
-import { runDiscovery, runDiscoveryCleanup, runDiscoverySingle } from "@/lib/pipeline/discovery";
+import { runDiscovery, runDiscoveryCleanup, runDiscoverySingle, runDiscoveryQuery } from "@/lib/pipeline/discovery";
 import { runIngestBatch } from "@/lib/pipeline/ingest";
 
 // Admin-authenticated job triggers. Uses the admin session cookie (set at login)
@@ -21,8 +21,15 @@ export async function POST(req: NextRequest) {
   const logger = new JobLogger(`admin-${job || "unknown"}`);
   try {
     if (job === "discover") {
-      // Scoped run: only the given source. Otherwise the normal rotating batch.
-      const result = sourceId ? await runDiscoverySingle(sourceId, logger) : await runDiscovery(logger);
+      // ?q=<query> runs a single on-demand search from the admin form.
+      // ?sourceId=<id> runs one saved source. Otherwise the normal rotating batch.
+      const q = url.searchParams.get("q");
+      const region = url.searchParams.get("region") || "Global";
+      const result = q
+        ? await runDiscoveryQuery(q, region, logger)
+        : sourceId
+        ? await runDiscoverySingle(sourceId, logger)
+        : await runDiscovery(logger);
       return NextResponse.json({ ok: true, result, log: logger.summary() });
     }
     if (job === "cleanup") {

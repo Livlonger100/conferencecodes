@@ -3,165 +3,145 @@
 import { useState, useEffect } from "react";
 import { discoveryYearsPhrase } from "@/lib/pipeline/config";
 
-// What {YEARS} expands to for today's date (space-separated calendar years the
-// rolling window covers, e.g. "2026 2027 2028").
-const YEARS_NOW = discoveryYearsPhrase();
+// Discovery: a single on-demand search form. Pick a continent, optionally a
+// country, an optional year within the rolling window, and an optional
+// keyword/type. Click Search to build one web-search query, run discovery for it,
+// and see how many candidates were found, added, already known, or dropped as
+// out-of-window. The date-window filtering is applied server-side, same as the
+// scheduled discovery. Admin-authenticated. No saved sources.
 
-// Discovery Settings: view/add/edit/enable/remove the discovery search sources.
-// Persisted in the discovery_sources table; the discovery job reads enabled rows
-// and falls back to config defaults if the table is empty. Admin-authenticated.
+const CONTINENTS = ["Any", "Africa", "Asia", "Europe", "North America", "South America", "Oceania"];
+// Years the current rolling window touches, e.g. ["2026", "2027"].
+const YEARS = discoveryYearsPhrase().split(" ");
 
 const S = {
   page: { minHeight: "100vh", background: "#f8f9fa", color: "#374151", fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif", fontSize: 14 },
   header: { background: "rgba(15,23,42,0.98)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 100 },
-  container: { maxWidth: 1000, margin: "0 auto", padding: "24px 32px" },
-  card: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
-  btnPrimary: { padding: "9px 16px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
+  container: { maxWidth: 720, margin: "0 auto", padding: "24px 32px" },
+  card: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: 20, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
+  btnPrimary: { padding: "11px 22px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
   btnSecondary: { padding: "8px 14px", borderRadius: 8, background: "#f3f4f6", border: "1px solid #d1d5db", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
-  btnGhost: { padding: "6px 10px", borderRadius: 6, background: "none", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
-  label: { fontSize: 10, color: "#6b7280", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3, display: "block" },
-  input: { width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13, fontFamily: "inherit", outline: "none" },
+  label: { fontSize: 10, color: "#6b7280", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "block" },
+  input: { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff" },
 };
 
-function Row({ src, onChanged, onAuthError, showToast }) {
-  const [s, setS] = useState(src);
-  const [busy, setBusy] = useState(false);
-  const dirty = JSON.stringify(s) !== JSON.stringify(src);
-  const set = (k, v) => setS((x) => ({ ...x, [k]: v }));
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/admin/sources", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
-      if (res.status === 401) return onAuthError();
-      const d = await res.json();
-      if (res.ok) { showToast("Saved"); onChanged(); } else showToast(d.error || "Save failed", true);
-    } finally { setBusy(false); }
-  };
-  const remove = async () => {
-    if (!window.confirm(`Remove source "${s.label}"?`)) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/admin/sources?id=${s.id}`, { method: "DELETE" });
-      if (res.status === 401) return onAuthError();
-      if (res.ok) { showToast("Removed"); onChanged(); } else showToast("Remove failed", true);
-    } finally { setBusy(false); }
-  };
-  const toggle = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/admin/sources", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: s.id, enabled: !s.enabled }) });
-      if (res.status === 401) return onAuthError();
-      if (res.ok) { showToast(!s.enabled ? "Enabled" : "Disabled"); onChanged(); }
-    } finally { setBusy(false); }
-  };
-  const runNow = async () => {
-    if (dirty && !window.confirm("You have unsaved edits to this source. Run using the last saved version?")) return;
-    setBusy(true);
-    try {
-      const run = await fetch(`/api/admin/run?job=discover&sourceId=${s.id}`, { method: "POST" });
-      if (run.status === 401) return onAuthError();
-      const d = await run.json();
-      if (run.ok) {
-        const r = d.result || {};
-        showToast(`"${s.label}": found ${r.candidatesFound ?? 0}, inserted ${r.newInserted ?? 0} (kept ${r.keptForInsert ?? 0}, ${r.pastDropped ?? 0} past, ${r.tooFarDropped ?? 0} too far)`);
-      } else showToast(d.error || "Run failed", true);
-    } catch (e) { showToast("Run request failed", true); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <div style={{ ...S.card, opacity: s.enabled ? 1 : 0.6 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "110px 1.4fr 1fr 70px", gap: 10, marginBottom: 8 }}>
-        <div>
-          <label style={S.label}>Type</label>
-          <select style={S.input} value={s.kind} onChange={(e) => set("kind", e.target.value)}>
-            <option value="search">search</option>
-            <option value="directory">directory</option>
-          </select>
-        </div>
-        <div>
-          <label style={S.label}>Label</label>
-          <input style={S.input} value={s.label || ""} onChange={(e) => set("label", e.target.value)} />
-        </div>
-        <div>
-          <label style={S.label}>Region</label>
-          <input style={S.input} value={s.region || ""} onChange={(e) => set("region", e.target.value)} />
-        </div>
-        <div>
-          <label style={S.label}>Order</label>
-          <input style={S.input} value={s.sort_order ?? 0} onChange={(e) => set("sort_order", parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0)} />
-        </div>
-      </div>
-      {s.kind === "directory" ? (
-        <div><label style={S.label}>Directory URL</label><input style={S.input} value={s.url || ""} onChange={(e) => set("url", e.target.value)} placeholder="https://..." /></div>
-      ) : (
-        <div>
-          <label style={S.label}>Search query (use {"{YEARS}"} for the rolling window years)</label>
-          <input style={S.input} value={s.query || ""} onChange={(e) => set("query", e.target.value)} placeholder="AI conferences {YEARS} ..." />
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{"{YEARS}"} = {YEARS_NOW}</div>
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#374151" }}>
-          <input type="checkbox" checked={!!s.enabled} onChange={toggle} disabled={busy} /> Enabled
-        </label>
-        <div style={{ flex: 1 }} />
-        <button style={S.btnGhost} disabled={busy} onClick={remove}>Remove</button>
-        <button style={{ ...S.btnSecondary, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={runNow}>{busy ? "Working..." : "Run now"}</button>
-        <button style={{ ...S.btnPrimary, opacity: !dirty || busy ? 0.5 : 1 }} disabled={!dirty || busy} onClick={save}>Save</button>
-      </div>
-    </div>
-  );
+// Build a loose web-search query from the form. Country wins over continent for
+// placement; keyword biases toward commercial events. Web search geo-targets
+// loosely, so this is a bias, not a strict filter (strays are caught at review).
+function buildQuery({ continent, country, year, keyword }) {
+  const parts = ["AI"];
+  const kw = keyword.trim();
+  if (kw) parts.push(kw);
+  else parts.push("conferences");
+  const place = country.trim() || (continent !== "Any" ? continent : "");
+  if (place) parts.push(place);
+  if (year !== "Any") parts.push(year);
+  return parts.join(" ");
 }
 
 function DiscoveryTool({ onAuthError }) {
-  const [sources, setSources] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [continent, setContinent] = useState("Any");
+  const [country, setCountry] = useState("");
+  const [year, setYear] = useState("Any");
+  const [keyword, setKeyword] = useState("");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState(null);
   const [toast, setToast] = useState(null);
-  const showToast = (msg, error = false) => { setToast({ msg, error }); setTimeout(() => setToast(null), 4000); };
 
-  const load = async () => {
-    setLoading(true);
+  const showToast = (msg, error = false) => { setToast({ msg, error }); setTimeout(() => setToast(null), 5000); };
+
+  const query = buildQuery({ continent, country, year, keyword });
+  const region = country.trim() || (continent !== "Any" ? continent : "Global");
+
+  const search = async () => {
+    setRunning(true);
+    setResult(null);
     try {
-      const res = await fetch("/api/admin/sources");
-      if (res.status === 401) return onAuthError();
-      const d = await res.json();
-      setSources(d.sources || []);
-    } catch (e) { showToast("Failed to load", true); }
-    setLoading(false);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
-
-  const addSource = async () => {
-    const res = await fetch("/api/admin/sources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "search", label: "New source", query: "AI conferences {YEARS}", region: "Global", enabled: true, sort_order: (sources.length || 0) + 1 }) });
-    if (res.status === 401) return onAuthError();
-    if (res.ok) { showToast("Added"); load(); } else showToast("Add failed", true);
+      const res = await fetch(`/api/admin/run?job=discover&q=${encodeURIComponent(query)}&region=${encodeURIComponent(region)}`, { method: "POST" });
+      if (res.status === 401) { onAuthError(); return; }
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || "Search failed", true); return; }
+      const r = data.result || {};
+      const found = r.candidatesFound ?? 0;
+      const added = r.newInserted ?? 0;
+      const outOfWindow = (r.pastDropped ?? 0) + (r.tooFarDropped ?? 0);
+      const known = Math.max(0, found - outOfWindow - added);
+      setResult({ query: r.query || query, found, added, known, outOfWindow });
+      showToast(`Search complete. ${added} new candidate${added === 1 ? "" : "s"} added.`);
+    } catch (e) { showToast("Search request failed", true); }
+    finally { setRunning(false); }
   };
 
   return (
     <div style={S.page}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
       <div style={S.header}>
-        <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Conference<span style={{ color: "#f97316" }}>Codes</span> · Discovery Settings</span>
+        <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Conference<span style={{ color: "#f97316" }}>Codes</span> · Discovery</span>
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Candidates</a>
-          <button style={S.btnPrimary} onClick={addSource}>+ Add source</button>
         </div>
       </div>
+
       <div style={S.container}>
-        <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>
-          Discovery runs these enabled sources each cycle. Search sources use web search; {"{YEARS}"} is replaced with the current rolling window years. If this list is empty, discovery falls back to built-in defaults.
+        <div style={S.card}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Search for conferences</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>
+            Choose where and what to look for, then run one web search. New events are added to Discovered for review. Location is a loose bias, not a strict filter, so review the results.
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={S.label}>Continent</label>
+              <select style={S.input} value={continent} onChange={(e) => setContinent(e.target.value)}>
+                {CONTINENTS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Country (optional)</label>
+              <input style={S.input} value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Australia, United Kingdom" />
+            </div>
+            <div>
+              <label style={S.label}>Year</label>
+              <select style={S.input} value={year} onChange={(e) => setYear(e.target.value)}>
+                <option value="Any">Any / all upcoming</option>
+                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Keyword / type (optional)</label>
+              <input style={S.input} value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder='e.g. summit, expo, enterprise AI' />
+            </div>
+          </div>
+
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>
+            Search query: <span style={{ fontFamily: "monospace", color: "#111827" }}>{query}</span>
+            {year === "Any" && <span> (across the full upcoming window)</span>}
+          </div>
+
+          <button style={{ ...S.btnPrimary, opacity: running ? 0.6 : 1 }} disabled={running} onClick={search}>
+            {running ? "Searching..." : "Search"}
+          </button>
         </div>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>Loading...</div>
-        ) : sources.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>No sources yet. Add one, or discovery will use built-in defaults.</div>
-        ) : (
-          sources.map((src) => <Row key={src.id} src={src} onChanged={load} onAuthError={onAuthError} showToast={showToast} />)
+
+        {result && (
+          <div style={S.card}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Result</div>
+            <div style={{ display: "flex", gap: 18, flexWrap: "wrap", fontSize: 13, marginBottom: 12 }}>
+              <span><b>{result.found}</b> found</span>
+              <span style={{ color: "#16a34a", fontWeight: 700 }}>{result.added} new</span>
+              <span style={{ color: "#64748b" }}><b>{result.known}</b> already known</span>
+              <span style={{ color: "#b45309" }}><b>{result.outOfWindow}</b> out of window</span>
+            </div>
+            {result.added > 0 ? (
+              <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>View {result.added} new candidate{result.added === 1 ? "" : "s"}</a>
+            ) : (
+              <div style={{ fontSize: 12, color: "#6b7280" }}>Nothing new to add. Try a different continent, country, year, or keyword.</div>
+            )}
+          </div>
         )}
       </div>
+
       {toast && (
         <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.error ? "#ef4444" : "#16a34a", color: "#fff", padding: "12px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>{toast.msg}</div>
       )}

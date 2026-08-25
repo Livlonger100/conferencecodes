@@ -266,6 +266,22 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
   return result;
 }
 
+// Run discovery for a single ad-hoc query typed in the admin search form. Builds
+// a one-off search source from the given query/region, runs it through the same
+// dedupe + rolling-window filtering + insert path as every other source, and
+// returns the same counts. No saved source is created or read.
+export async function runDiscoveryQuery(query: string, region: string, logger: JobLogger) {
+  const now = new Date();
+  const q = String(query || "").trim();
+  if (!q) throw new Error("query is required");
+  const source: DiscoverySource = { kind: "search", label: `Search: ${q}`, query: q, region: region || "Global" };
+  logger.info("discovery.query_start", { query: q, region: source.region });
+  const counts = await processSourceBatch([source], now, logger, false);
+  const result = { ...counts, query: q, region: source.region };
+  logger.info("discovery.query_done", result);
+  return result;
+}
+
 // Run discovery for a SINGLE source (by discovery_sources id), immediately,
 // regardless of rotation or enabled state. Inserts candidates, returns counts.
 export async function runDiscoverySingle(sourceId: string, logger: JobLogger) {
