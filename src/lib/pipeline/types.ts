@@ -28,6 +28,8 @@ export interface Candidate {
 // What discovery emits before dedupe/insert.
 export interface DiscoveredCandidate {
   name: string;
+  full_name: string | null;
+  short_description: string | null;
   url: string;
   approx_date: string | null;
   city: string | null;

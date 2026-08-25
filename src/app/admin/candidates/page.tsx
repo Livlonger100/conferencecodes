@@ -86,6 +86,7 @@ function CandidatesTool() {
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Bulk Import</a>
+          <a href="/admin/discovery" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Discovery</a>
           <button style={{ ...S.btnSecondary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("discover")}>{running === "discover" ? "Running..." : "Run discovery"}</button>
           <button style={{ ...S.btnPrimary, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => runJob("ingest")}>{running === "ingest" ? "Running..." : "Run ingestion"}</button>
         </div>
@@ -122,7 +123,13 @@ function CandidatesTool() {
                     <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ marginTop: 4 }} />
                   )}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{c.name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{c.full_name || c.name}</div>
+                    {c.full_name && c.full_name !== c.name && (
+                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{c.name}</div>
+                    )}
+                    {c.short_description && (
+                      <div style={{ fontSize: 13, color: "#374151", margin: "4px 0", lineHeight: 1.45 }}>{c.short_description}</div>
+                    )}
                     <div style={{ fontSize: 12, color: "#6b7280", margin: "4px 0" }}>
                       {[c.city, c.country].filter(Boolean).join(", ") || "Location unknown"}
                       {c.approx_date ? ` · ${c.approx_date}` : ""}

@@ -4,6 +4,7 @@ import {
   DISCOVERY_SOURCES_PER_RUN,
   DISCOVERY_WINDOW_MONTHS,
   discoveryWindow,
+  discoveryYearsPhrase,
   getDiscoverySources,
   type DiscoverySource,
 } from "./config";
@@ -90,13 +91,43 @@ function parseApproxDate(raw: string | null): { earliest: Date; latest: Date } |
 
 const DISCOVERY_SYSTEM = `You find real, upcoming AI / machine learning conferences worldwide for a directory.
 Return ONLY a JSON array (no prose, no markdown). Each item:
-{ "name": string, "url": string (official site), "approx_date": string, "city": string, "country": string }
+{ "name": string, "full_name": string, "short_description": string, "url": string (official site), "approx_date": string, "city": string, "country": string }
 Rules:
 - Only real events you can find, focused on AI / ML / data / generative AI / AI agents.
+- name is the common name as shown (may be an acronym, e.g. "ICLR 2027").
+- full_name is the expanded name when the name is an acronym or abbreviation (e.g. "International Conference on Learning Representations"); if the name is already full, repeat it.
+- short_description is one plain line of about 15 to 25 words describing what the conference is and who it is for. Base it on the search results only. Do not use an em dash.
 - Prefer the official conference website for "url".
 - approx_date can be coarse (e.g. "March 2026") if exact dates are unclear.
 - Only include upcoming events (today or later), ideally within the next 18 months.
 - Do not include pricing. Do not invent events. Return up to 15 items.`;
+
+// Load discovery sources from the DB (editable in admin), falling back to the
+// hardcoded config defaults if the table is empty or unavailable. {YEARS} in a
+// stored query is interpolated with the current rolling window.
+async function loadSources(now: Date, logger: JobLogger): Promise<DiscoverySource[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("discovery_sources")
+      .select("kind, label, query, url, region, enabled, sort_order")
+      .eq("enabled", true)
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    if (data && data.length > 0) {
+      const YEARS = discoveryYearsPhrase(now);
+      logger.info("discovery.sources_from_db", { count: data.length });
+      return data.map((r: any) =>
+        r.kind === "directory"
+          ? { kind: "directory", label: r.label, url: r.url || "", region: r.region || "Global" }
+          : { kind: "search", label: r.label, query: String(r.query || "").replace(/\{YEARS\}/g, YEARS), region: r.region || "Global" }
+      );
+    }
+  } catch (e: any) {
+    logger.warn("discovery.sources_db_unavailable", { error: e?.message });
+  }
+  logger.info("discovery.sources_from_config", {});
+  return getDiscoverySources(now);
+}
 
 async function runSource(source: DiscoverySource, logger: JobLogger): Promise<DiscoveredCandidate[]> {
   const prompt =
@@ -121,6 +152,8 @@ async function runSource(source: DiscoverySource, logger: JobLogger): Promise<Di
     .filter((x) => x && x.name && x.url)
     .map((x) => ({
       name: String(x.name).trim(),
+      full_name: x.full_name ? String(x.full_name).trim() : null,
+      short_description: x.short_description ? String(x.short_description).trim() : null,
       url: String(x.url).trim(),
       approx_date: x.approx_date ? String(x.approx_date).trim() : null,
       city: x.city ? String(x.city).trim() : null,
@@ -134,7 +167,7 @@ async function runSource(source: DiscoverySource, logger: JobLogger): Promise<Di
 export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolean; now?: Date } = {}) {
   const dryRun = !!options.dryRun;
   const now = options.now ?? new Date();
-  const sources = getDiscoverySources(now);
+  const sources = await loadSources(now, logger);
   const { start: today, end: windowEnd } = discoveryWindow(now);
 
   const offset = await getOffset();
@@ -167,6 +200,8 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
     if (!byKey.has(dedupe_key)) {
       byKey.set(dedupe_key, {
         name: c.name,
+        full_name: c.full_name,
+        short_description: c.short_description,
         url: c.url,
         approx_date: c.approx_date,
         city: c.city,
