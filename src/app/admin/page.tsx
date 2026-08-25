@@ -420,29 +420,32 @@ OTHER RULES:
             <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", textTransform: "uppercase", letterSpacing: 0.5 }}>Pricing Tiers</div>
             <button onClick={addPricingTier} style={S.btnSecondary}>+ Add Tier</button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 88px 130px 58px 26px", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 0.9fr) 72px 124px 46px 24px", gap: 8, alignItems: "center", width: "100%" }}>
             <div style={S.label}>Tier</div>
             <div style={S.label}>Price</div>
             <div style={S.label}>After deadline</div>
             <div style={S.label}>Currency</div>
             <div style={S.label}>Early-bird deadline</div>
-            <div style={S.label}>Sold out</div>
+            <div style={{ ...S.label, textAlign: "center" }}>Sold out</div>
             <div></div>
-            {(form.pricing || []).map((tier, i) => (
+            {(form.pricing || []).map((tier, i) => {
+              const ci = { ...S.inputSm, width: "100%", minWidth: 0, boxSizing: "border-box" };
+              return (
               <Fragment key={tier.id || i}>
-                <input style={S.inputSm} value={tier.tier || ""} onChange={e => updatePricing(i, "tier", e.target.value)} placeholder="Early Bird" />
-                <input style={S.inputSm} type="text" inputMode="numeric" value={fmtMoney(tier.price, tier.currency)} onChange={e => updatePricing(i, "price", parseMoney(e.target.value))} placeholder="Price" />
-                <input style={S.inputSm} type="text" inputMode="numeric" value={fmtMoney(tier.price_after_deadline, tier.currency)} onChange={e => updatePricing(i, "price_after_deadline", parseMoney(e.target.value))} placeholder="After" />
-                <select style={S.inputSm} value={tier.currency || "USD"} onChange={e => updatePricing(i, "currency", e.target.value)}>
+                <input style={ci} value={tier.tier || ""} onChange={e => updatePricing(i, "tier", e.target.value)} placeholder="Early Bird" />
+                <input style={ci} type="text" inputMode="numeric" value={fmtMoney(tier.price, tier.currency)} onChange={e => updatePricing(i, "price", parseMoney(e.target.value))} placeholder="Price" />
+                <input style={ci} type="text" inputMode="numeric" value={fmtMoney(tier.price_after_deadline, tier.currency)} onChange={e => updatePricing(i, "price_after_deadline", parseMoney(e.target.value))} placeholder="After" />
+                <select style={ci} value={tier.currency || "USD"} onChange={e => updatePricing(i, "currency", e.target.value)}>
                   {CURRENCIES.map(cx => <option key={cx}>{cx}</option>)}
                 </select>
-                <input style={{ ...S.inputSm, colorScheme: "light" }} type="date" value={tier.deadline || ""} onChange={e => updatePricing(i, "deadline", e.target.value || null)} />
+                <input style={{ ...ci, colorScheme: "light" }} type="date" value={tier.deadline || ""} onChange={e => updatePricing(i, "deadline", e.target.value || null)} />
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                   <input type="checkbox" checked={!!tier.sold_out} onChange={e => updatePricing(i, "sold_out", e.target.checked)} />
                 </div>
-                <button onClick={() => removePricingTier(i)} title="Remove tier" style={{ ...S.btnGhost, color: "#ef4444", padding: 2, fontSize: 18, lineHeight: 1 }}>×</button>
+                <button onClick={() => removePricingTier(i)} title="Remove tier" style={{ ...S.btnGhost, color: "#ef4444", padding: 2, fontSize: 18, lineHeight: 1, justifySelf: "center" }}>×</button>
               </Fragment>
-            ))}
+              );
+            })}
           </div>
           {(form.pricing || []).length === 0 && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8 }}>No tiers yet. Click Add Tier.</div>}
         </div>
