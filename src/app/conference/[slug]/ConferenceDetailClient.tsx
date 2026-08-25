@@ -98,11 +98,25 @@ function ConferenceDetail({ conf, onBack }) {
       <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "20px 28px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <h2 style={{ fontSize: 11, fontWeight: 600, color: "var(--cc-muted)", margin: "0 0 20px 0", letterSpacing: "0.8px", textTransform: "uppercase" }}>Pricing</h2>
 
-        {conf.confidence != null && conf.confidence < PUBLIC_PRICING_NOTE_BELOW && (
-          <div style={{ background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "var(--cc-body)" }}>
-            Pricing shown may be incomplete. We are still verifying the full list of tiers and deadlines for this conference.
-          </div>
-        )}
+        {conf.confidence != null && conf.confidence < PUBLIC_PRICING_NOTE_BELOW && (() => {
+          // Partial-but-honest pricing: a "from" framing plus a clear note and a
+          // link to the official site. Does not imply the tier list is complete.
+          const priced = (conf.pricingTiers || []).filter(t => t.price != null && !t.sold_out);
+          const lowest = priced.length ? priced.reduce((a, b) => (b.price < a.price ? b : a)) : null;
+          return (
+            <div style={{ background: "var(--cc-warm-gray)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
+              {lowest && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--cc-ink)", marginBottom: 4 }}>Tickets from {formatMoney(lowest.price, lowest.currency)}</div>
+              )}
+              <div style={{ fontSize: 12, color: "var(--cc-body)", lineHeight: 1.5 }}>
+                Pricing shown may be incomplete. Check the official site for full details and all ticket types.
+                {conf.source_url && (
+                  <> <a href={conf.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--cc-gold-dk)", fontWeight: 600, textDecoration: "none" }}>Visit the official site</a>.</>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {(() => {
           const tiers = conf.pricingTiers || [];
