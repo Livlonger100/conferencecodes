@@ -813,6 +813,7 @@ function AdminTool() {
           <button onClick={() => { setView("add"); setEditingConf(null); setExtractedData(null); setExtractUrl(""); setExtractStatus(""); }} style={view === "add" ? S.btnPrimary : S.btnSecondary}>+ Add New</button>
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Candidates</a>
           <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Bulk Import</a>
+          <a href="/admin/discovery" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Discovery</a>
         </div>
       </div>
 
