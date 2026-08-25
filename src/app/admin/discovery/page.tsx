@@ -50,6 +50,20 @@ function Row({ src, onChanged, onAuthError, showToast }) {
       if (res.ok) { showToast(!s.enabled ? "Enabled" : "Disabled"); onChanged(); }
     } finally { setBusy(false); }
   };
+  const runNow = async () => {
+    if (dirty && !window.confirm("You have unsaved edits to this source. Run using the last saved version?")) return;
+    setBusy(true);
+    try {
+      const run = await fetch(`/api/admin/run?job=discover&sourceId=${s.id}`, { method: "POST" });
+      if (run.status === 401) return onAuthError();
+      const d = await run.json();
+      if (run.ok) {
+        const r = d.result || {};
+        showToast(`"${s.label}": found ${r.candidatesFound ?? 0}, inserted ${r.newInserted ?? 0} (kept ${r.keptForInsert ?? 0}, ${r.pastDropped ?? 0} past, ${r.tooFarDropped ?? 0} too far)`);
+      } else showToast(d.error || "Run failed", true);
+    } catch (e) { showToast("Run request failed", true); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div style={{ ...S.card, opacity: s.enabled ? 1 : 0.6 }}>
@@ -85,6 +99,7 @@ function Row({ src, onChanged, onAuthError, showToast }) {
         </label>
         <div style={{ flex: 1 }} />
         <button style={S.btnGhost} disabled={busy} onClick={remove}>Remove</button>
+        <button style={{ ...S.btnSecondary, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={runNow}>{busy ? "Working..." : "Run now"}</button>
         <button style={{ ...S.btnPrimary, opacity: !dirty || busy ? 0.5 : 1 }} disabled={!dirty || busy} onClick={save}>Save</button>
       </div>
     </div>
