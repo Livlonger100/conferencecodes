@@ -41,6 +41,10 @@ export interface DiscoveredCandidate {
 export interface ExtractedTier {
   name: string;
   price: number | null;
+  // Price for the NEXT time-window after the current one (set when a ticket type
+  // has multiple time-windowed prices that were collapsed into one tier). Null
+  // when there is no later window.
+  price_after_deadline: number | null;
   currency: string | null;
   is_early_bird: boolean;
   early_bird_start: string | null; // ISO date

@@ -16,7 +16,7 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
     pricing_tiers: {
       type: "array",
       description:
-        "Only include tiers and prices that literally appear on the page. If no ticket prices are shown, return an empty array. Never invent or estimate prices, names, or dates.",
+        "Only include tiers and prices that literally appear on the page. If no ticket prices are shown, return an empty array. Never invent or estimate prices, names, or dates. If a ticket type shows several prices for different registration periods (e.g. Early Bird, Second Term, Final), output one item per period using the exact same name for each, with that period's price and its deadline. Do not merge or average them.",
       items: {
         type: "object",
         properties: {
@@ -26,7 +26,7 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
           is_early_bird: { type: "boolean" },
           early_bird_start: { type: ["string", "null"], description: "YYYY-MM-DD or null" },
           early_bird_end: { type: ["string", "null"], description: "YYYY-MM-DD or null" },
-          deadline: { type: ["string", "null"], description: "Price-change / registration deadline YYYY-MM-DD or null" },
+          deadline: { type: ["string", "null"], description: "The date this price or registration period ends (when the price changes), YYYY-MM-DD or null" },
         },
       },
     },
@@ -37,7 +37,7 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
 // Sent to Firecrawl's JSON extraction alongside the schema. The schema alone does
 // not carry a do-not-invent instruction, so this makes it explicit.
 export const EXTRACTION_JSON_PROMPT =
-  "Extract conference ticket pricing. Only include tiers and prices that literally appear on the page text. If no ticket prices are shown, return an empty pricing_tiers array. Never invent, estimate, or guess prices, tier names, or dates.";
+  "Extract conference ticket pricing. Only include tiers and prices that literally appear on the page text. If no ticket prices are shown, return an empty pricing_tiers array. Never invent, estimate, or guess prices, tier names, or dates. If a ticket type shows several prices across different registration periods (for example Early Bird, Second Term, Final), return one entry per period using the exact same tier name for each, with that period's price and set deadline to the date that period ends. Do not average or merge them.";
 
 export const EXTRACTION_SYSTEM = `You extract conference data for ConferenceCodes (AI conferences only).
 Return ONLY valid JSON matching the requested schema. No markdown, no prose.
@@ -93,6 +93,7 @@ export function normalizeExtraction(raw: any): ExtractedConference | null {
   const tiers: ExtractedTier[] = tiersRaw.map((t: any) => ({
     name: String(t?.name ?? "").trim() || "Standard",
     price: typeof t?.price === "number" ? t.price : (t?.price == null ? null : Number(t.price)) ,
+    price_after_deadline: null, // populated only by collapseTimeWindows, never by the extractor
     currency: resolveCurrency(t?.currency),
     is_early_bird: !!t?.is_early_bird,
     // Drop bad/out-of-range tier dates to null instead of failing ingestion.
@@ -207,4 +208,105 @@ export function groundTiers(tiers: ExtractedTier[], markdown: string): Extracted
 // At least one grounded numeric-priced tier remains.
 export function hasGroundedPricing(tiers: ExtractedTier[]): boolean {
   return tiers.some((t) => t.price != null && !Number.isNaN(t.price as number));
+}
+
+// ---- collapse multi-time-window pricing into one tier per ticket type --------
+// A pricing grid (e.g. Early Bird / Second Term / Final for each ticket type)
+// arrives as one tier per (name x window). Collapse each name to a SINGLE tier
+// mapped to our model: price = the current active window's price,
+// price_after_deadline = the next window's price, deadline = the date the current
+// window ends. Windows whose deadline has already passed are dropped. Every price
+// used is one that was already grounded, so grounding is preserved.
+// Time-window phase labels that some pages bake into the tier name itself, e.g.
+// "Student Participation SECOND TERM" or "EARLYBIRD REGISTRATION". Stripped to
+// recover the base ticket type so windows of the same ticket group together.
+const PHASE_LABELS = [
+  "super early bird", "super earlybird", "early bird", "early-bird", "earlybird",
+  "first term", "second term", "third term", "fourth term", "final term",
+  "1st term", "2nd term", "3rd term", "4th term",
+  "early registration", "regular registration", "late registration", "final",
+  "regular", "standard", "late", "on-site", "on site", "onsite", "advance", "advanced",
+].sort((a, b) => b.length - a.length);
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+const PHASE_RE = new RegExp(`\\b(?:${PHASE_LABELS.map(escapeRe).join("|")})\\b`, "ig");
+
+// Remove phase labels from a tier name, keeping the rest of the punctuation.
+function baseDisplayName(name: string): string {
+  return (name || "")
+    .replace(PHASE_RE, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s\-|_,:]+|[\s\-|_,:]+$/g, "")
+    .trim();
+}
+// Aggressive key used only for grouping (case/punctuation-insensitive).
+function baseKey(name: string): string {
+  return baseDisplayName(name).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+export function collapseTimeWindows(tiers: ExtractedTier[], now: Date = new Date()): ExtractedTier[] {
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const windowEndIso = (t: ExtractedTier): string | null => t.deadline || t.early_bird_end || null;
+  const windowEndMs = (t: ExtractedTier): number | null => {
+    const d = windowEndIso(t);
+    if (!d) return null;
+    const ms = Date.parse(d);
+    return Number.isNaN(ms) ? null : ms;
+  };
+
+  // Group by base ticket name (phase label removed), preserving first-seen order.
+  const order: string[] = [];
+  const groups = new Map<string, ExtractedTier[]>();
+  for (const t of tiers) {
+    const key = baseKey(t.name) || (t.name || "").trim().toLowerCase() || "tier";
+    if (!groups.has(key)) { groups.set(key, []); order.push(key); }
+    groups.get(key)!.push(t);
+  }
+
+  const out: ExtractedTier[] = [];
+  for (const key of order) {
+    const group = groups.get(key)!;
+    const priced = group.filter((t) => t.price != null && !Number.isNaN(t.price as number));
+    const distinctDates = new Set(priced.map(windowEndMs).filter((v) => v != null)).size;
+
+    // Only collapse a genuine time-window grid: 2+ priced windows spanning 2+
+    // distinct dates. Anything else is left exactly as-is (no merging).
+    if (priced.length < 2 || distinctDates < 2) {
+      for (const t of group) out.push(t);
+      continue;
+    }
+
+    const dated = priced.filter((t) => windowEndMs(t) != null).sort((a, b) => windowEndMs(a)! - windowEndMs(b)!);
+    const undated = priced.filter((t) => windowEndMs(t) == null);
+    // Drop windows whose deadline has already passed. Ordered remaining windows:
+    // soonest still-open deadline first, then any undated (open/onsite) window.
+    const futureDated = dated.filter((t) => windowEndMs(t)! >= today);
+    const remaining = [...futureDated, ...undated];
+
+    let current: ExtractedTier;
+    let next: ExtractedTier | null;
+    if (remaining.length > 0) {
+      current = remaining[0];
+      next = remaining.length > 1 ? remaining[1] : null;
+    } else {
+      // Every window's deadline has passed: keep the most recent one, no rise.
+      current = dated[dated.length - 1];
+      next = null;
+    }
+
+    const currency = current.currency ?? group.find((t) => t.currency)?.currency ?? null;
+    out.push({
+      name: baseDisplayName(current.name) || current.name,
+      price: current.price,
+      price_after_deadline: next ? next.price : null,
+      currency,
+      is_early_bird: !!current.is_early_bird,
+      early_bird_start: current.early_bird_start ?? null,
+      early_bird_end: null,
+      deadline: next ? windowEndIso(current) : null,
+    });
+  }
+  return out;
 }

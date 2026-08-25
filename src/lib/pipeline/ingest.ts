@@ -13,6 +13,7 @@ import {
   EXTRACTION_JSON_PROMPT,
   EXTRACTION_JSON_SCHEMA,
   EXTRACTION_SYSTEM,
+  collapseTimeWindows,
   groundTiers,
   hasGroundedPricing,
   normalizeExtraction,
@@ -243,7 +244,9 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
     pricing = { pricingTiers: [], baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
   }
 
-  const pricingTiers: ExtractedTier[] = pricing.pricingTiers;
+  // Collapse multi-time-window pricing (one grid cell per window) into one tier
+  // per ticket type, mapped to the current-price / price-after-deadline model.
+  const pricingTiers: ExtractedTier[] = collapseTimeWindows(pricing.pricingTiers);
   const base = mergeBase(cheap.base, pricing.baseFromGiven);
 
   const stealthUsed = pricing.proxyUsed === "stealth";
@@ -420,6 +423,7 @@ export async function writeConference(
     conference_id: conferenceId,
     tier_name: t.name,
     price: t.price,
+    price_after_deadline: t.price_after_deadline ?? null,
     currency: t.currency || "USD",
     deadline: toIsoDateOrNull(t.deadline || t.early_bird_end),
     early_bird_start: toIsoDateOrNull(t.early_bird_start),
