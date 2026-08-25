@@ -164,36 +164,19 @@ async function runSource(source: DiscoverySource, logger: JobLogger): Promise<Di
   return out;
 }
 
-export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolean; now?: Date } = {}) {
-  const dryRun = !!options.dryRun;
-  const now = options.now ?? new Date();
-  const sources = await loadSources(now, logger);
+// Shared: run a set of sources, dedupe, apply the date window, insert. Returns counts.
+async function processSourceBatch(batch: DiscoverySource[], now: Date, logger: JobLogger, dryRun: boolean) {
   const { start: today, end: windowEnd } = discoveryWindow(now);
-
-  const offset = await getOffset();
-  const { batch, nextOffset } = pickSources(offset, sources);
-  logger.info("discovery.start", {
-    offset,
-    dryRun,
-    sourcesThisRun: batch.map((s) => s.label),
-    totalSources: sources.length,
-    windowStart: today.toISOString().slice(0, 10),
-    windowEnd: windowEnd.toISOString().slice(0, 10),
-    windowMonths: DISCOVERY_WINDOW_MONTHS,
-    autoApprove: AUTO_APPROVE,
-  });
 
   const found: DiscoveredCandidate[] = [];
   for (const source of batch) {
     try {
-      const items = await runSource(source, logger);
-      found.push(...items);
+      found.push(...(await runSource(source, logger)));
     } catch (e: any) {
       logger.error("discovery.source_failed", { source: source.label, error: e?.message });
     }
   }
 
-  // Dedupe in-batch first.
   const byKey = new Map<string, any>();
   for (const c of found) {
     const dedupe_key = makeDedupeKey({ name: c.name, date: c.approx_date, city: c.city, url: c.url });
@@ -215,8 +198,6 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
     }
   }
 
-  // Apply the rolling date window: drop past-dated and too-far-out candidates,
-  // keep (and flag) candidates whose date cannot be parsed.
   const rows: any[] = [];
   let pastDropped = 0;
   let tooFarDropped = 0;
@@ -229,21 +210,14 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
       rows.push(row);
       continue;
     }
-    if (parsed.latest < today) {
-      pastDropped++;
-      continue;
-    }
-    if (parsed.earliest > windowEnd) {
-      tooFarDropped++;
-      continue;
-    }
+    if (parsed.latest < today) { pastDropped++; continue; }
+    if (parsed.earliest > windowEnd) { tooFarDropped++; continue; }
     rows.push(row);
   }
 
   let inserted = 0;
   if (!dryRun && rows.length > 0) {
-    // ignoreDuplicates + unique(dedupe_key) makes re-runs idempotent: existing
-    // candidates are skipped, not overwritten.
+    // ignoreDuplicates + unique(dedupe_key) makes re-runs idempotent.
     const { data, error } = await supabaseAdmin
       .from("discovery_queue")
       .upsert(rows, { onConflict: "dedupe_key", ignoreDuplicates: true })
@@ -252,10 +226,7 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
     else inserted = data?.length ?? 0;
   }
 
-  // In a dry run, leave the source rotation offset untouched too.
-  if (!dryRun) await setOffset(nextOffset);
-
-  const result = {
+  return {
     candidatesFound: found.length,
     uniqueThisRun: byKey.size,
     pastDropped,
@@ -263,10 +234,60 @@ export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolea
     undatedFlagged,
     keptForInsert: rows.length,
     newInserted: inserted,
-    dryRun,
-    nextOffset: dryRun ? offset : nextOffset,
   };
+}
+
+export async function runDiscovery(logger: JobLogger, options: { dryRun?: boolean; now?: Date } = {}) {
+  const dryRun = !!options.dryRun;
+  const now = options.now ?? new Date();
+  const sources = await loadSources(now, logger);
+  const { start: today, end: windowEnd } = discoveryWindow(now);
+
+  const offset = await getOffset();
+  const { batch, nextOffset } = pickSources(offset, sources);
+  logger.info("discovery.start", {
+    offset,
+    dryRun,
+    sourcesThisRun: batch.map((s) => s.label),
+    totalSources: sources.length,
+    windowStart: today.toISOString().slice(0, 10),
+    windowEnd: windowEnd.toISOString().slice(0, 10),
+    windowMonths: DISCOVERY_WINDOW_MONTHS,
+    autoApprove: AUTO_APPROVE,
+  });
+
+  const counts = await processSourceBatch(batch, now, logger, dryRun);
+
+  // In a dry run, leave the source rotation offset untouched too.
+  if (!dryRun) await setOffset(nextOffset);
+
+  const result = { ...counts, dryRun, nextOffset: dryRun ? offset : nextOffset };
   logger.info("discovery.done", result);
+  return result;
+}
+
+// Run discovery for a SINGLE source (by discovery_sources id), immediately,
+// regardless of rotation or enabled state. Inserts candidates, returns counts.
+export async function runDiscoverySingle(sourceId: string, logger: JobLogger) {
+  const now = new Date();
+  const { data, error } = await supabaseAdmin
+    .from("discovery_sources")
+    .select("*")
+    .eq("id", sourceId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("discovery source not found");
+
+  const YEARS = discoveryYearsPhrase(now);
+  const source: DiscoverySource =
+    data.kind === "directory"
+      ? { kind: "directory", label: data.label, url: data.url || "", region: data.region || "Global" }
+      : { kind: "search", label: data.label, query: String(data.query || "").replace(/\{YEARS\}/g, YEARS), region: data.region || "Global" };
+
+  logger.info("discovery.single_start", { label: source.label, kind: source.kind });
+  const counts = await processSourceBatch([source], now, logger, false);
+  const result = { ...counts, source: source.label };
+  logger.info("discovery.single_done", result);
   return result;
 }
 
