@@ -1,6 +1,11 @@
 // @ts-nocheck
 "use client";
 import { useState, useEffect } from "react";
+import { discoveryYearsPhrase } from "@/lib/pipeline/config";
+
+// What {YEARS} expands to for today's date (space-separated calendar years the
+// rolling window covers, e.g. "2026 2027 2028").
+const YEARS_NOW = discoveryYearsPhrase();
 
 // Discovery Settings: view/add/edit/enable/remove the discovery search sources.
 // Persisted in the discovery_sources table; the discovery job reads enabled rows
@@ -91,7 +96,11 @@ function Row({ src, onChanged, onAuthError, showToast }) {
       {s.kind === "directory" ? (
         <div><label style={S.label}>Directory URL</label><input style={S.input} value={s.url || ""} onChange={(e) => set("url", e.target.value)} placeholder="https://..." /></div>
       ) : (
-        <div><label style={S.label}>Search query (use {"{YEARS}"} for the rolling window years)</label><input style={S.input} value={s.query || ""} onChange={(e) => set("query", e.target.value)} placeholder="AI conferences {YEARS} ..." /></div>
+        <div>
+          <label style={S.label}>Search query (use {"{YEARS}"} for the rolling window years)</label>
+          <input style={S.input} value={s.query || ""} onChange={(e) => set("query", e.target.value)} placeholder="AI conferences {YEARS} ..." />
+          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{"{YEARS}"} = {YEARS_NOW}</div>
+        </div>
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#374151" }}>
