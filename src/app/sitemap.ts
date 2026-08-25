@@ -3,6 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 const BASE_URL = "https://conferencecodes.com";
 
+// Refresh hourly so conferences published in admin (without a redeploy) appear
+// in the sitemap automatically, rather than only being picked up on each build.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data } = await supabaseAdmin
     .from("conferences")
