@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 import { useState, useEffect, Fragment } from "react";
+import { useAdminAuth, AuthBadge, SignInOverlay } from "./authUi";
 
 // ============================================================
 // ConferenceCodes Admin Tool — Next.js + Supabase
@@ -403,7 +404,7 @@ const STATUS_COLORS = {
     );
   };
 
-function AdminTool() {
+function AdminTool({ auth }) {
 
   const [conferences, setConferences] = useState([]);
   const [view, setView] = useState("list"); // list | add | edit | detail
@@ -482,7 +483,7 @@ function AdminTool() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      if (response.status === 401) { setExtractStatus("Session expired. Please sign in again."); return; }
+      if (response.status === 401) { setExtractStatus("Session expired. Sign in to continue, then run the extraction again."); auth.sessionLost(); return; }
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Extraction failed");
 
@@ -728,6 +729,7 @@ function AdminTool() {
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Candidates</a>
           <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Bulk Import</a>
           <a href="/admin/discovery" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Discovery</a>
+          <AuthBadge status={auth.status} onSignIn={auth.openSignIn} onSignOut={auth.signOut} />
         </div>
       </div>
 
@@ -755,7 +757,7 @@ function AdminTool() {
                 </button>
               </div>
               {extractStatus && (
-                <div style={{ marginTop: 12, fontSize: 13, color: extracting ? "#fb923c" : (extractStatus.includes("Error") ? "#ef4444" : "#22c55e"), display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ marginTop: 12, fontSize: 13, color: extracting ? "#fb923c" : (/error|expired|fail|invalid|could not|not signed/i.test(extractStatus) ? "#ef4444" : "#22c55e"), display: "flex", alignItems: "center", gap: 8 }}>
                   {extracting && (
                     <div style={{ width: 14, height: 14, border: "2px solid rgba(249,115,22,0.3)", borderTop: "2px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                   )}
@@ -924,57 +926,20 @@ function AdminTool() {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [pwInput, setPwInput] = useState("");
-  const [pwError, setPwError] = useState("");
-  const [pwLoading, setPwLoading] = useState(false);
+  const auth = useAdminAuth();
+  const [everAuthed, setEverAuthed] = useState(false);
+  useEffect(() => { if (auth.status === "valid") setEverAuthed(true); }, [auth.status]);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_authed") === "1") setAuthed(true);
-    setAuthChecked(true);
-  }, []);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setPwLoading(true);
-    setPwError("");
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pwInput }),
-    });
-    setPwLoading(false);
-    if (res.ok) {
-      sessionStorage.setItem("admin_authed", "1");
-      setAuthed(true);
-    } else {
-      setPwError("Incorrect password");
-      setPwInput("");
-    }
-  };
-
-  if (!authChecked) return null;
-
-  if (authed) return <AdminTool />;
-
+  if (auth.status === "checking") {
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fa", color: "#6b7280" }}>Checking session...</div>;
+  }
+  if (auth.status === "invalid" && !everAuthed) {
+    return <SignInOverlay open invalid={false} onSignedIn={auth.onSignedIn} onClose={null} />;
+  }
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fa", fontFamily: "inherit" }}>
-      <form onSubmit={handleLogin} style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 20, padding: 40, width: 320, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: "#111827", textAlign: "center" }}>Admin</div>
-        <input
-          type="password"
-          placeholder="Password"
-          value={pwInput}
-          onChange={e => setPwInput(e.target.value)}
-          autoFocus
-          style={{ padding: "10px 14px", borderRadius: 8, background: "#f9fafb", border: `1px solid ${pwError ? "#ef4444" : "#d1d5db"}`, color: "#111827", fontSize: 15, fontFamily: "inherit", outline: "none" }}
-        />
-        {pwError && <div style={{ fontSize: 13, color: "#ef4444", textAlign: "center" }}>{pwError}</div>}
-        <button type="submit" disabled={pwLoading || !pwInput} style={{ padding: "10px 0", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ea580c)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: pwLoading || !pwInput ? "not-allowed" : "pointer", opacity: pwLoading || !pwInput ? 0.6 : 1, fontFamily: "inherit" }}>
-          {pwLoading ? "Checking..." : "Enter"}
-        </button>
-      </form>
-    </div>
+    <>
+      <AdminTool auth={auth} />
+      <SignInOverlay open={auth.signInOpen || auth.status === "invalid"} invalid={auth.status === "invalid"} onSignedIn={auth.onSignedIn} onClose={() => auth.setSignInOpen(false)} />
+    </>
   );
 }

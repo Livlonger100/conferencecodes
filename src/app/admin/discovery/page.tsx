@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { discoveryYearsPhrase } from "@/lib/pipeline/config";
+import { useAdminAuth, AuthBadge, SignInOverlay } from "../authUi";
 
 // Discovery: a single on-demand search form. Pick a continent, optionally a
 // country, an optional year within the rolling window, and an optional
@@ -39,7 +40,8 @@ function buildQuery({ continent, country, year, keyword }) {
   return parts.join(" ");
 }
 
-function DiscoveryTool({ onAuthError }) {
+function DiscoveryTool({ auth }) {
+  const onAuthError = () => { showToast("Session expired. Sign in to continue.", true); auth.sessionLost(); };
   const [continent, setContinent] = useState("Any");
   const [country, setCountry] = useState("");
   const [year, setYear] = useState("Any");
@@ -80,6 +82,7 @@ function DiscoveryTool({ onAuthError }) {
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Candidates</a>
+          <AuthBadge status={auth.status} onSignIn={auth.openSignIn} onSignOut={auth.signOut} />
         </div>
       </div>
 
@@ -150,36 +153,25 @@ function DiscoveryTool({ onAuthError }) {
 }
 
 export default function DiscoveryPage() {
-  const [authed, setAuthed] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [pwInput, setPwInput] = useState("");
-  const [pwError, setPwError] = useState("");
+  const auth = useAdminAuth();
+  const [everAuthed, setEverAuthed] = useState(false);
+  useEffect(() => { if (auth.status === "valid") setEverAuthed(true); }, [auth.status]);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_authed") === "1") setAuthed(true);
-    setAuthChecked(true);
-  }, []);
-
-  const submit = async () => {
-    const res = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pwInput }) });
-    if (res.ok) { sessionStorage.setItem("admin_authed", "1"); setAuthed(true); setPwError(""); }
-    else setPwError("Incorrect password");
-  };
-  const handleAuthError = () => { sessionStorage.removeItem("admin_authed"); setAuthed(false); setPwError("Please sign in again to continue."); };
-
-  if (!authChecked) return null;
-  if (authed) return <DiscoveryTool onAuthError={handleAuthError} />;
-
-  return (
-    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
-      <div style={{ ...S.card, width: 320 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 12 }}>Admin access</div>
-        <input type="password" style={S.input} placeholder="Password" value={pwInput}
-          onChange={(e) => setPwInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-        {pwError && <div style={{ color: "#ef4444", fontSize: 12, marginTop: 8 }}>{pwError}</div>}
-        <button style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }} onClick={submit}>Enter</button>
+  if (auth.status === "checking") {
+    return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}>Checking session...</div>;
+  }
+  if (auth.status === "invalid" && !everAuthed) {
+    return (
+      <div style={{ ...S.page }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+        <SignInOverlay open invalid={false} onSignedIn={auth.onSignedIn} onClose={null} />
       </div>
-    </div>
+    );
+  }
+  return (
+    <>
+      <DiscoveryTool auth={auth} />
+      <SignInOverlay open={auth.signInOpen || auth.status === "invalid"} invalid={auth.status === "invalid"} onSignedIn={auth.onSignedIn} onClose={() => auth.setSignInOpen(false)} />
+    </>
   );
 }

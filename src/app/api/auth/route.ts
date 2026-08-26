@@ -28,3 +28,16 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: "Invalid password" }, { status: 401 });
 }
+
+// Sign out: clear the admin session cookie.
+export async function DELETE() {
+  const res = NextResponse.json({ ok: true });
+  res.cookies.set(ADMIN_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+  return res;
+}
