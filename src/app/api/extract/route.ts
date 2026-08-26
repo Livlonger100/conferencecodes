@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { groundPricingTiers, formatGroundingReport } from "@/lib/pipeline/grounding";
+import { resolveCurrency } from "@/lib/pipeline/extract-schema";
 
 export async function POST(req: NextRequest) {
   const { system, messages, tools } = await req.json();
@@ -110,6 +112,46 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       console.error("Claude API error:", JSON.stringify(data));
       return NextResponse.json({ error: data.error?.message || "Claude API error", details: data }, { status: response.status });
+    }
+
+    // Ground the model's proposed pricing against the raw fetched page text, using
+    // the same shared gate as the pipeline, so the Add New path cannot persist
+    // fabricated tiers. Only grounded tiers (and a mechanical evidence report) are
+    // returned as data.grounded; the client uses these instead of the raw pricing.
+    try {
+      const fullText = (data.content || []).map((it: any) => (it?.type === "text" ? it.text : "")).filter(Boolean).join("\n");
+      const jsonMatch = fullText.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+      if (jsonMatch && pageContents) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const proposed = Array.isArray(parsed.pricing) ? parsed.pricing : [];
+        const tiers = proposed.map((p: any) => ({
+          name: String(p?.tier ?? "").trim(),
+          price: p?.price === 0 ? 0 : p?.price == null ? null : Number(p.price),
+          currency: resolveCurrency(p?.currency) || p?.currency || null,
+          is_early_bird: false,
+          early_bird_start: null,
+          early_bird_end: null,
+          deadline: p?.deadline || null,
+          price_after_deadline: null,
+        }));
+        const { tiers: kept, report } = groundPricingTiers(tiers, pageContents);
+        data.grounded = {
+          pricing: kept.map((t: any) => ({
+            tier: t.name,
+            price: t.price,
+            currency: t.currency || "USD",
+            deadline: t.deadline || null,
+            deadline_passed: false,
+            days_included: "all",
+            requires_approval: false,
+            notes: "",
+          })),
+          note: formatGroundingReport(report),
+        };
+      }
+    } catch (e) {
+      // Grounding could not run (unparseable model output / no page text). The
+      // client then shows no auto-pricing rather than anything ungrounded.
     }
 
     return NextResponse.json(data);

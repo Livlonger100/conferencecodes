@@ -81,6 +81,8 @@ export interface ExtractionMeta {
   stealthUsed: boolean;
   pricingUrl: string | null; // page pricing actually came from (may differ from the official URL)
   pricingTried: string[]; // pricing-page URLs attempted when the given URL had none
+  groundingNote?: string; // mechanical grounding evidence report (replaces model prose)
+  groundingConfidence?: number | null; // grounded/proposed ratio (replaces model confidence)
 }
 
 export interface ExtractionResult {

@@ -14,11 +14,10 @@ import {
   EXTRACTION_JSON_SCHEMA,
   EXTRACTION_SYSTEM,
   collapseTimeWindows,
-  groundTiers,
-  hasGroundedPricing,
   normalizeExtraction,
   validateExtraction,
 } from "./extract-schema";
+import { groundPricingTiers, formatGroundingReport, type GroundingReport } from "./grounding";
 import { assessCompleteness, detectPricingSignals } from "./completeness";
 import { makeSlug } from "@/lib/slug";
 import type { JobLogger } from "./log";
@@ -114,6 +113,7 @@ function rankPricingLinks(links: string[], baseUrl: string): string[] {
 
 interface PricingFind {
   pricingTiers: ExtractedTier[];
+  report: GroundingReport | null;
   baseFromGiven: ExtractedConference | null;
   pricingUrl: string | null;
   tried: string[];
@@ -126,24 +126,29 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   const prompt = EXTRACTION_JSON_PROMPT;
   const tried: string[] = [];
   let calls = 0;
+  let lastReport: GroundingReport | null = null;
 
-  // Extracted tiers are only kept if their prices literally appear in the page
-  // markdown; ungrounded/fabricated prices are dropped before deciding "found".
-  const grounded = (json: any, markdown: string): ExtractedTier[] =>
-    groundTiers(normalizeExtraction(json)?.pricing_tiers ?? [], markdown);
+  // Every candidate page goes through the single shared grounding gate. Only
+  // tiers whose name, price and their pairing are evidenced in the scraped text
+  // survive; fabricated/ungrounded tiers are dropped before deciding "found".
+  const ground = (json: any, markdown: string) => {
+    const res = groundPricingTiers(normalizeExtraction(json)?.pricing_tiers ?? [], markdown);
+    lastReport = res.report;
+    return res;
+  };
 
   // 1. The given URL (basic), also fetching its links.
   tried.push(givenUrl);
   calls++;
   const first = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "basic", withLinks: true, logger });
   const baseFromGiven = normalizeExtraction(first.json);
-  const g1 = grounded(first.json, first.markdown);
-  if (hasGroundedPricing(g1)) {
-    logger.info("pricing.found", { from: "given", url: givenUrl, tiers: g1.length });
-    return { pricingTiers: g1, baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
+  const g1 = ground(first.json, first.markdown);
+  if (g1.tiers.length > 0) {
+    logger.info("pricing.found", { from: "given", url: givenUrl, tiers: g1.tiers.length, dropped: g1.report.dropped.length });
+    return { pricingTiers: g1.tiers, report: g1.report, baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
   }
   const rawCount1 = (normalizeExtraction(first.json)?.pricing_tiers ?? []).filter((t) => t.price != null).length;
-  logger.info("pricing.ungrounded", { url: givenUrl, rawPricedTiers: rawCount1, groundedPricedTiers: 0 });
+  logger.info("pricing.ungrounded", { url: givenUrl, rawPricedTiers: rawCount1, groundedTiers: 0, dropped: g1.report.dropped.length });
 
   // 2. Link scan: follow the best pricing/tickets links on that page.
   const linkCands = rankPricingLinks(first.links, givenUrl).slice(0, 2);
@@ -152,10 +157,10 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     tried.push(cand);
     calls++;
     const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", logger });
-    const g = grounded(c.json, c.markdown);
-    if (hasGroundedPricing(g)) {
-      logger.info("pricing.found", { from: "link_scan", url: cand, tiers: g.length });
-      return { pricingTiers: g, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    const g = ground(c.json, c.markdown);
+    if (g.tiers.length > 0) {
+      logger.info("pricing.found", { from: "link_scan", url: cand, tiers: g.tiers.length, dropped: g.report.dropped.length });
+      return { pricingTiers: g.tiers, report: g.report, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
     }
   }
 
@@ -169,10 +174,10 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     tried.push(cand);
     calls++;
     const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", logger });
-    const g = grounded(c.json, c.markdown);
-    if (hasGroundedPricing(g)) {
-      logger.info("pricing.found", { from: "map", url: cand, tiers: g.length });
-      return { pricingTiers: g, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    const g = ground(c.json, c.markdown);
+    if (g.tiers.length > 0) {
+      logger.info("pricing.found", { from: "map", url: cand, tiers: g.tiers.length, dropped: g.report.dropped.length });
+      return { pricingTiers: g.tiers, report: g.report, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
     }
   }
 
@@ -182,17 +187,17 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     tried.push(`${givenUrl} (stealth)`);
     calls++;
     const s = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "stealth", withLinks: true, logger });
-    const g = grounded(s.json, s.markdown);
-    if (hasGroundedPricing(g)) {
-      logger.info("pricing.found", { from: "stealth", url: givenUrl, tiers: g.length });
-      return { pricingTiers: g, baseFromGiven: normalizeExtraction(s.json) ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+    const g = ground(s.json, s.markdown);
+    if (g.tiers.length > 0) {
+      logger.info("pricing.found", { from: "stealth", url: givenUrl, tiers: g.tiers.length, dropped: g.report.dropped.length });
+      return { pricingTiers: g.tiers, report: g.report, baseFromGiven: normalizeExtraction(s.json) ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
     }
     logger.warn("pricing.none_found", { url: givenUrl, tried });
-    return { pricingTiers: [], baseFromGiven, pricingUrl: null, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+    return { pricingTiers: [], report: lastReport, baseFromGiven, pricingUrl: null, tried, proxyUsed: "stealth", firecrawlCalls: calls };
   }
 
   logger.warn("pricing.none_found", { url: givenUrl, tried });
-  return { pricingTiers: [], baseFromGiven, pricingUrl: null, tried, proxyUsed: "basic", firecrawlCalls: calls };
+  return { pricingTiers: [], report: lastReport, baseFromGiven, pricingUrl: null, tried, proxyUsed: "basic", firecrawlCalls: calls };
 }
 
 // ---- Tier 3: future browser-agent tier (STUB, not implemented) -------------
@@ -241,13 +246,21 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
     pricing = await findAndExtractPricing(url, logger);
   } catch (e: any) {
     logger.warn("pricing.finder_threw", { url, error: e?.message });
-    pricing = { pricingTiers: [], baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
+    pricing = { pricingTiers: [], report: null, baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
   }
 
   // Collapse multi-time-window pricing (one grid cell per window) into one tier
   // per ticket type, mapped to the current-price / price-after-deadline model.
   const pricingTiers: ExtractedTier[] = collapseTimeWindows(pricing.pricingTiers);
   const base = mergeBase(cheap.base, pricing.baseFromGiven);
+
+  // Evidence-based signals: a mechanical grounding report and a grounded/proposed
+  // ratio replace the model-reported confidence and prose summary.
+  const keptCount = pricing.report?.kept.length ?? pricingTiers.length;
+  const droppedCount = pricing.report?.dropped.length ?? 0;
+  const groundingConfidence =
+    keptCount + droppedCount > 0 ? Math.round((keptCount / (keptCount + droppedCount)) * 100) / 100 : pricingTiers.length > 0 ? 0.7 : 0;
+  const groundingNote = pricing.report ? formatGroundingReport(pricing.report) : `${pricingTiers.length} grounded tier${pricingTiers.length === 1 ? "" : "s"}`;
 
   const stealthUsed = pricing.proxyUsed === "stealth";
   const meta: ExtractionMeta = {
@@ -257,6 +270,8 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
     stealthUsed,
     pricingUrl: pricing.pricingUrl,
     pricingTried: pricing.tried,
+    groundingNote,
+    groundingConfidence,
   };
 
   if (!base) {
@@ -375,7 +390,7 @@ export async function writeConference(
     description: data.description,
     category: PIPELINE_CATEGORY,
     status,
-    confidence: meta.completeness.score,
+    confidence: meta.extraction.groundingConfidence ?? meta.completeness.score,
     start_date: toIsoDateOrNull(data.start_date),
     end_date: toIsoDateOrNull(data.end_date),
     city: data.city,
@@ -383,7 +398,7 @@ export async function writeConference(
     region: regionFromCountry(data.country),
     source_url: data.official_url,
     registration_url: data.official_url,
-    extraction_notes: `${meta.completeness.note} | pricing: ${fcSummary}${pricingSrc}${dateNote} | candidate ${meta.sourceCandidate.id}`,
+    extraction_notes: `${meta.extraction.groundingNote || ""}\n${fcSummary}${pricingSrc}${dateNote} | candidate ${meta.sourceCandidate.id}`,
     next_recrawl_at: nextRecrawl,
     updated_at: new Date().toISOString(),
   };

@@ -287,6 +287,7 @@ Return this exact structure:
 
 CRITICAL PRICING AND TIER RULES:
 - ONLY extract tiers that are EXPLICITLY listed on the conference website. NEVER invent, infer, or add tiers that are not visible on the page (e.g. do not add a "Student" tier just because many conferences have one).
+- Extract the actual purchasable passes/tickets (e.g. Startups Pass, All Access Pass, VIP Pass, Investors, Media). Do NOT treat a price-increase timeline or rate-escalation schedule (rows like "Early Rate", "Standard Rate", "Advance Rate", "Late Rate", "Final Rate" under a "Registration Timeline") as separate ticket tiers; those describe how one pass's price rises over time, not distinct products.
 - Use the EXACT tier name as shown on the website. Do not rename, embellish, or "improve" tier names. If the site says "Early Bird", use "Early Bird" — not "Super Early Bird", not "Early Access", not any variation.
 - Extract ALL tiers that ARE visible, including expensive/premium tiers. Do not skip high-priced tiers.
 - If a tier has expandable details (e.g. "More info" links), note in extraction_notes what you could and couldn't see.
@@ -364,16 +365,14 @@ OTHER RULES:
           </div>
         </div>
 
-        {/* 1. Confidence + notes + compare link */}
-        {(form.extraction_notes || form.confidence != null || form.source_url) && (
+        {/* 1. Grounding evidence + compare link (replaces self-reported confidence) */}
+        {(form.extraction_notes || form.source_url) && (
           <div style={{ ...S.card, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", marginBottom: 12, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5 }}>Grounding evidence</span>
               <a href={form.source_url || "#"} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: "#2563eb", textDecoration: "none" }}>Open official site to compare</a>
-              {form.confidence != null && (
-                <span style={{ fontSize: 12, fontWeight: 700, color: form.confidence >= 0.7 ? "#16a34a" : form.confidence >= 0.5 ? "#f59e0b" : "#ef4444" }}>Confidence {Math.round(form.confidence * 100)}%</span>
-              )}
             </div>
-            {form.extraction_notes && <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5, marginTop: 6 }}>{form.extraction_notes}</div>}
+            {form.extraction_notes && <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.5, marginTop: 8, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, monospace" }}>{form.extraction_notes}</div>}
           </div>
         )}
 
@@ -596,7 +595,10 @@ function AdminTool() {
         start: parsed.start || "",
         end: parsed.end || "",
         format: parsed.format || "In-person",
-        pricing: (parsed.pricing || []).map((p, i) => ({
+        // Only grounded pricing (verified against the fetched page text by the
+        // shared grounding gate) is used. If nothing grounded, pricing is empty
+        // and can be entered manually. Never fall back to ungrounded model pricing.
+        pricing: ((data.grounded?.pricing) || []).map((p, i) => ({
           id: `tier_${i}`,
           tier: p.tier || "Standard",
           price: p.price === undefined ? null : p.price,
@@ -629,10 +631,11 @@ function AdminTool() {
         discount_max_uses: null,
         discount_uses: 0,
         status: "draft",
-        extraction_notes: parsed.extraction_notes || "",
+        // Mechanical grounding evidence replaces the model prose + confidence.
+        extraction_notes: data.grounded?.note || "No pricing could be grounded against the page text.",
         created_at: new Date().toISOString(),
         last_verified: new Date().toISOString(),
-        confidence: 0.85,
+        confidence: null,
       };
 
       setExtractedData(normalized);
