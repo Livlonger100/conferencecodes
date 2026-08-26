@@ -1,162 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
-import { groundPricingTiers, formatGroundingReport } from "@/lib/pipeline/grounding";
-import { resolveCurrency } from "@/lib/pipeline/extract-schema";
+import { checkAdminAuth } from "@/lib/admin-auth";
+import { runExtraction } from "@/lib/pipeline/ingest";
+import { JobLogger } from "@/lib/pipeline/log";
+import { PIPELINE_CATEGORY } from "@/lib/pipeline/config";
+
+// Add New extraction. Single route from URL to grounded pricing, shared with
+// Scrape / Bulk Import / Re-scrape: Firecrawl fetch, shared extraction prompt,
+// shared grounding gate, and the pricing-page finder fallback. No naive fetch,
+// no web_search: extraction operates only on the fetched page text.
+export const runtime = "nodejs";
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const { system, messages, tools } = await req.json();
+  const authError = checkAdminAuth(req);
+  if (authError) return NextResponse.json({ error: authError }, { status: 401 });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });
-  }
-
-  // Extract URLs from the user message to pre-fetch page content
-  const userMsg = messages?.[0]?.content || "";
-  const urlRegex = /https?:\/\/[^\s,\n]+/g;
-  const urls = userMsg.match(urlRegex) || [];
-
-  // Fetch each URL's HTML content server-side
-  let pageContents = "";
-  for (const url of urls.slice(0, 5)) { // max 5 URLs
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-        redirect: "follow",
-        signal: AbortSignal.timeout(15000),
-      });
-      if (res.ok) {
-        const html = await res.text();
-        // Strip HTML tags but keep text content, limit to 30k chars
-        const text = html
-          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 30000);
-        pageContents += `\n\n=== Content from ${url} ===\n${text}\n`;
-      }
-    } catch (e) {
-      pageContents += `\n\n=== Failed to fetch ${url} ===\n`;
-    }
-  }
-
-  // Also try common subpages
-  if (urls.length > 0) {
-    const baseUrl = new URL(urls[0]);
-    const baseDomain = `${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname.replace(/\/+$/, "")}`;
-    const subpages = ["/pricing", "/tickets", "/register", "/registration", "/attend"];
-    
-    for (const sub of subpages) {
-      const subUrl = baseDomain + sub;
-      if (urls.includes(subUrl)) continue; // already fetched
-      try {
-        const res = await fetch(subUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-            "Accept": "text/html,application/xhtml+xml",
-          },
-          redirect: "follow",
-          signal: AbortSignal.timeout(10000),
-        });
-        if (res.ok && res.status === 200) {
-          const html = await res.text();
-          const text = html
-            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .slice(0, 15000);
-          if (text.length > 500) { // only include if substantial content
-            pageContents += `\n\n=== Content from ${subUrl} ===\n${text}\n`;
-          }
-        }
-      } catch (e) {
-        // skip failed subpages silently
-      }
-    }
-  }
-
-  // Modify the user message to include fetched content
-  const enhancedMessages = [...messages];
-  if (pageContents && enhancedMessages.length > 0) {
-    enhancedMessages[0] = {
-      ...enhancedMessages[0],
-      content: enhancedMessages[0].content + "\n\nHere is the actual page content I pre-fetched for you:\n" + pageContents,
-    };
-  }
-
+  let url: string;
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+    ({ url } = await req.json());
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+  if (!url || typeof url !== "string") {
+    return NextResponse.json({ error: "url required" }, { status: 400 });
+  }
+
+  const logger = new JobLogger("admin-extract");
+  try {
+    const result = await runExtraction(url.trim(), logger);
+    const base = result.base ?? null;
+    const pricing = (base?.pricing_tiers ?? []).map((t) => ({
+      tier: t.name,
+      price: t.price,
+      price_after_deadline: t.price_after_deadline ?? null,
+      currency: t.currency || "USD",
+      deadline: t.deadline || null,
+      deadline_passed: false,
+      days_included: "all",
+      requires_approval: false,
+      notes: "",
+    }));
+    return NextResponse.json({
+      ok: result.ok,
+      errors: result.errors,
+      groundingNote: result.meta.groundingNote || "",
+      pricingUrl: result.meta.pricingUrl || null,
+      base: {
+        name: base?.title || "",
+        description: base?.description || "",
+        city: base?.city || "",
+        country: base?.country || "",
+        start: base?.start_date || "",
+        end: base?.end_date || "",
+        official_url: base?.official_url || url.trim(),
+        category: PIPELINE_CATEGORY,
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 4000,
-        system,
-        messages: enhancedMessages,
-        tools,
-      }),
+      pricing,
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Claude API error:", JSON.stringify(data));
-      return NextResponse.json({ error: data.error?.message || "Claude API error", details: data }, { status: response.status });
-    }
-
-    // Ground the model's proposed pricing against the raw fetched page text, using
-    // the same shared gate as the pipeline, so the Add New path cannot persist
-    // fabricated tiers. Only grounded tiers (and a mechanical evidence report) are
-    // returned as data.grounded; the client uses these instead of the raw pricing.
-    try {
-      const fullText = (data.content || []).map((it: any) => (it?.type === "text" ? it.text : "")).filter(Boolean).join("\n");
-      const jsonMatch = fullText.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-      if (jsonMatch && pageContents) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        const proposed = Array.isArray(parsed.pricing) ? parsed.pricing : [];
-        const tiers = proposed.map((p: any) => ({
-          name: String(p?.tier ?? "").trim(),
-          price: p?.price === 0 ? 0 : p?.price == null ? null : Number(p.price),
-          currency: resolveCurrency(p?.currency) || p?.currency || null,
-          is_early_bird: false,
-          early_bird_start: null,
-          early_bird_end: null,
-          deadline: p?.deadline || null,
-          price_after_deadline: null,
-        }));
-        const { tiers: kept, report } = groundPricingTiers(tiers, pageContents);
-        data.grounded = {
-          pricing: kept.map((t: any) => ({
-            tier: t.name,
-            price: t.price,
-            currency: t.currency || "USD",
-            deadline: t.deadline || null,
-            deadline_passed: false,
-            days_included: "all",
-            requires_approval: false,
-            notes: "",
-          })),
-          note: formatGroundingReport(report),
-        };
-      }
-    } catch (e) {
-      // Grounding could not run (unparseable model output / no page text). The
-      // client then shows no auto-pricing rather than anything ungrounded.
-    }
-
-    return NextResponse.json(data);
   } catch (e: any) {
-    console.error("Extract route error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    logger.error("admin_extract.fatal", { error: e?.message });
+    return NextResponse.json({ error: e?.message || "extraction failed" }, { status: 500 });
   }
 }
