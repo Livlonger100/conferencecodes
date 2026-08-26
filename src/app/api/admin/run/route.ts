@@ -38,8 +38,10 @@ export async function POST(req: NextRequest) {
     }
     if (job === "ingest") {
       // ?id=<candidate id> scrapes just that one queued candidate.
+      // ?force=1 bypasses the page cache (admin Re-scrape of a changed page).
       const onlyId = url.searchParams.get("id");
-      const result = await runIngestBatch(logger, onlyId ? { onlyId } : {});
+      const forceRefresh = url.searchParams.get("force") === "1";
+      const result = await runIngestBatch(logger, { ...(onlyId ? { onlyId } : {}), forceRefresh });
       return NextResponse.json({ ok: true, result, log: logger.summary() });
     }
     return NextResponse.json({ error: "unknown job (use ?job=discover|ingest|cleanup)" }, { status: 400 });

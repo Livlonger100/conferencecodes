@@ -43,6 +43,12 @@ function CandidatesTool() {
   const [scrapingId, setScrapingId] = useState(null); // row currently scraping
   const [rowResults, setRowResults] = useState({}); // { [id]: { kind: "drafted"|"failed", reason? } }
   const [bulkResult, setBulkResult] = useState(null); // { drafted, failed } persistent summary
+  const [usage, setUsage] = useState(null); // firecrawl credit usage
+
+  const loadUsage = async () => {
+    try { const r = await fetch("/api/admin/firecrawl-usage"); if (r.ok) { const d = await r.json(); setUsage(d); } } catch (e) {}
+  };
+  useEffect(() => { loadUsage(); /* eslint-disable-next-line */ }, []);
 
   const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast(null), 5000); };
   const sessionExpired = () => { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); setRunning(null); };
@@ -99,9 +105,11 @@ function CandidatesTool() {
       if (q.status === 401) return sessionExpired();
       if (!q.ok) { const d = await q.json(); showToast(d.error || "Could not queue", "error"); setRunning(null); return; }
       let drafted = 0, failed = 0, remaining = null;
+      // Re-scrape forces a fresh fetch (the page may have changed); first scrape reuses cache.
+      const force = action === "rescrape" ? "&force=1" : "";
       setProgress("Scraping...");
       for (let round = 0; round < 60; round++) {
-        const res = await fetch(`/api/admin/run?job=ingest`, { method: "POST" });
+        const res = await fetch(`/api/admin/run?job=ingest${force}`, { method: "POST" });
         if (res.status === 401) return sessionExpired();
         const data = await res.json();
         if (!res.ok) { showToast(data.error || "Scrape failed", "error"); break; }
@@ -115,6 +123,7 @@ function CandidatesTool() {
       }
       setProgress(null);
       await load(status);
+      loadUsage();
       setBulkResult({ drafted, failed });
     } catch (e) { setProgress(null); showToast("Scrape request failed", "error"); }
     setRunning(null);
@@ -129,7 +138,7 @@ function CandidatesTool() {
     try {
       const q = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id], action }) });
       if (q.status === 401) return sessionExpired();
-      const res = await fetch(`/api/admin/run?job=ingest&id=${id}`, { method: "POST" });
+      const res = await fetch(`/api/admin/run?job=ingest&id=${id}${action === "rescrape" ? "&force=1" : ""}`, { method: "POST" });
       if (res.status === 401) return sessionExpired();
       const data = await res.json();
       if (!res.ok) {
@@ -140,6 +149,7 @@ function CandidatesTool() {
         else setRowResults((m) => ({ ...m, [id]: { kind: "drafted" } }));
       }
       await refreshCounts();
+      loadUsage();
     } catch (e) {
       setRowResults((m) => ({ ...m, [id]: { kind: "failed", reason: "request failed" } }));
     } finally { setScrapingId(null); setRunning(null); }
@@ -179,6 +189,22 @@ function CandidatesTool() {
       )}
 
       <div style={S.container}>
+        {usage?.usage && (() => {
+          const u = usage.usage;
+          const pct = Math.min(100, Math.round((u.monthCredits / (usage.freeTierCredits || 1000)) * 100));
+          const over = pct >= 80;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "#374151" }}>
+              <span style={{ fontWeight: 800, color: over ? "#dc2626" : "#111827" }}>Firecrawl: ~{u.monthCredits} / {usage.freeTierCredits} credits this month ({pct}%)</span>
+              <span style={{ color: "#6b7280" }}>{u.monthCalls} calls</span>
+              <span style={{ color: "#16a34a" }}>{u.cacheHits || 0} cache hits</span>
+              {u.failures ? <span style={{ color: "#ef4444" }}>{u.failures} failed</span> : null}
+              {u.byType && <span style={{ color: "#6b7280" }}>by type: {Object.entries(u.byType).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}</span>}
+              {u.bySource && <span style={{ color: "#6b7280" }}>by source: {Object.entries(u.bySource).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}</span>}
+              <button style={{ ...S.btnSecondary, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={loadUsage}>Refresh</button>
+            </div>
+          );
+        })()}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           {TABS.map((t) => (
             <button key={t.key} style={S.tab(status === t.key)} onClick={() => goTo(t.key)}>

@@ -42,6 +42,9 @@ export const FIRECRAWL_BASE_URL = "https://api.firecrawl.dev/v2";
 // Cheap attempt first (basic proxy). Only escalate to stealth (more credits)
 // when the cheap attempt returns no usable pricing.
 export const FIRECRAWL_ESCALATE_TO_STEALTH = true;
+// A cached scrape of a URL younger than this is reused instead of re-fetching
+// (saves Firecrawl credits). Admin Re-scrape forces a fresh fetch.
+export const FIRECRAWL_CACHE_DAYS = 7;
 
 // Every candidate/conference is tagged with this category. 3C is AI-only.
 export const PIPELINE_CATEGORY = "AI / Tech";

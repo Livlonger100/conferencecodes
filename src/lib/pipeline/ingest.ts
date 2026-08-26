@@ -130,7 +130,7 @@ interface PricingFind {
   firecrawlCalls: number;
 }
 
-async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promise<PricingFind> {
+async function findAndExtractPricing(givenUrl: string, logger: JobLogger, forceRefresh = false): Promise<PricingFind> {
   const schema = EXTRACTION_JSON_SCHEMA;
   const prompt = EXTRACTION_JSON_PROMPT;
   const tried: string[] = [];
@@ -151,7 +151,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   // 1. The given URL (basic), also fetching its links.
   tried.push(givenUrl);
   calls++;
-  const first = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "basic", withLinks: true, logger });
+  const first = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "basic", withLinks: true, callType: "scrape", forceRefresh, logger });
   const baseFromGiven = normalizeExtraction(first.json);
   const g1 = ground(first.json, first.markdown);
   if (g1.tiers.length > 0) {
@@ -164,7 +164,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
       if (strong && !tried.includes(strong)) {
         tried.push(strong);
         calls++;
-        const c = await firecrawlScrape({ url: strong, schema, prompt, proxy: "basic", logger });
+        const c = await firecrawlScrape({ url: strong, schema, prompt, proxy: "basic", callType: "finder", forceRefresh, logger });
         const g2 = ground(c.json, c.markdown);
         if (g2.tiers.length > g1.tiers.length) {
           logger.info("pricing.found", { from: "dedicated_pricing_page", url: strong, tiers: g2.tiers.length, over: g1.tiers.length });
@@ -184,7 +184,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   for (const cand of linkCands) {
     tried.push(cand);
     calls++;
-    const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", logger });
+    const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", callType: "finder", forceRefresh, logger });
     const g = ground(c.json, c.markdown);
     if (g.tiers.length > 0) {
       logger.info("pricing.found", { from: "link_scan", url: cand, tiers: g.tiers.length, dropped: g.report.dropped.length });
@@ -201,7 +201,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   for (const cand of mapCands) {
     tried.push(cand);
     calls++;
-    const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", logger });
+    const c = await firecrawlScrape({ url: cand, schema, prompt, proxy: "basic", callType: "finder", forceRefresh, logger });
     const g = ground(c.json, c.markdown);
     if (g.tiers.length > 0) {
       logger.info("pricing.found", { from: "map", url: cand, tiers: g.tiers.length, dropped: g.report.dropped.length });
@@ -214,7 +214,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     logger.info("pricing.stealth_last_resort", { url: givenUrl });
     tried.push(`${givenUrl} (stealth)`);
     calls++;
-    const s = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "stealth", withLinks: true, logger });
+    const s = await firecrawlScrape({ url: givenUrl, schema, prompt, proxy: "stealth", withLinks: true, callType: "scrape", forceRefresh, logger });
     const g = ground(s.json, s.markdown);
     if (g.tiers.length > 0) {
       logger.info("pricing.found", { from: "stealth", url: givenUrl, tiers: g.tiers.length, dropped: g.report.dropped.length });
@@ -259,7 +259,7 @@ function mergeBase(a: ExtractedConference | null, b: ExtractedConference | null)
 }
 
 // Single extraction path: cheap fetch for base fields, Firecrawl for pricing.
-export async function runExtraction(url: string, logger: JobLogger): Promise<ExtractionResult> {
+export async function runExtraction(url: string, logger: JobLogger, opts: { forceRefresh?: boolean } = {}): Promise<ExtractionResult> {
   const cheap = await extractBaseFields(url, logger).catch((e: any) => {
     logger.warn("base.threw", { url, error: e?.message });
     return { base: null as ExtractedConference | null, pageText: "" };
@@ -271,7 +271,7 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
   // Pricing via Firecrawl, finding the tickets/pricing page if the given URL has none.
   let pricing: PricingFind;
   try {
-    pricing = await findAndExtractPricing(url, logger);
+    pricing = await findAndExtractPricing(url, logger, !!opts.forceRefresh);
   } catch (e: any) {
     logger.warn("pricing.finder_threw", { url, error: e?.message });
     pricing = { pricingTiers: [], report: null, pricingMarkdown: "", baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
@@ -518,7 +518,7 @@ export interface IngestItemResult {
 
 export async function runIngestBatch(
   logger: JobLogger,
-  opts: { onlyId?: string | null } = {}
+  opts: { onlyId?: string | null; forceRefresh?: boolean } = {}
 ): Promise<{ processed: number; remainingApproved: number; results: IngestItemResult[] }> {
   const onlyId = opts.onlyId || null;
 
@@ -542,7 +542,7 @@ export async function runIngestBatch(
   for (const candidate of candidates) {
     logger.info("ingest.item", { id: candidate.id, name: candidate.name, url: candidate.url });
     try {
-      const extraction = await runExtraction(candidate.url, logger);
+      const extraction = await runExtraction(candidate.url, logger, { forceRefresh: !!opts.forceRefresh });
 
       if (!extraction.ok || !extraction.data) {
         const reason = extraction.errors.join("; ") || "extraction failed";
