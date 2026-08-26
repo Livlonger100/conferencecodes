@@ -249,6 +249,104 @@ export function hasGroundedTiers(result: GroundingResult): boolean {
   return result.tiers.length > 0;
 }
 
+// ---- grounded struck-through discount deadlines -----------------------------
+
+function parseNum(s: string): number {
+  return parseInt(String(s).replace(/[.,\s]/g, ""), 10);
+}
+function monthIndex(name: string): number {
+  return MONTHS_ABBR.indexOf((name || "").toLowerCase().slice(0, 3));
+}
+function pad2(n: number): string { return String(n).padStart(2, "0"); }
+function saneIso(iso: string): boolean {
+  const y = parseInt(iso.slice(0, 4), 10);
+  return !Number.isNaN(Date.parse(iso)) && y >= 2024 && y <= 2032;
+}
+
+// Highest struck-through (~~..~~) or "was <n>" currency price in the block that
+// is greater than the current price. Returns null when none is grounded.
+function highestStruckPrice(blockLow: string, current: number): number | null {
+  const cands: number[] = [];
+  let m: RegExpExecArray | null;
+  const struck = /~~([^~]{1,60})~~/g;
+  while ((m = struck.exec(blockLow)) !== null) {
+    const nm = m[1].match(/[€$£¥₹]\s*(\d[\d.,]*)|(\d[\d.,]*)\s*(?:eur|usd|gbp)/);
+    if (nm) { const n = parseNum(nm[1] || nm[2]); if (n > current) cands.push(n); }
+  }
+  const was = /\bwas\b[^\d€$£¥₹]{0,6}[€$£¥₹]?\s*(\d[\d.,]*)/g;
+  while ((m = was.exec(blockLow)) !== null) { const n = parseNum(m[1]); if (n > current) cands.push(n); }
+  return cands.length ? Math.max(...cands) : null;
+}
+
+interface DiscountDate { monthIdx: number; day: number; year: number | null; }
+function parseDatePhrase(text: string): DiscountDate | null {
+  const m = text.match(/(?:through|until|before|ends?|til|till)\s+([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(20\d{2}))?/);
+  if (!m) return null;
+  const mi = monthIndex(m[1]); const day = parseInt(m[2], 10);
+  if (mi < 0 || day < 1 || day > 31) return null;
+  return { monthIdx: mi, day, year: m[3] ? parseInt(m[3], 10) : null };
+}
+// Page-level "save <amount> through DATE" phrases, tied to a discount amount.
+function parsePageDiscounts(low: string): { amount: number; date: DiscountDate }[] {
+  const out: { amount: number; date: DiscountDate }[] = [];
+  const re = /save\s*[€$£¥₹]?\s*(\d[\d.,]*)\s*(?:through|until|before|ends?|til|till)\s+([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(20\d{2}))?/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(low)) !== null) {
+    const mi = monthIndex(m[2]); const day = parseInt(m[3], 10);
+    if (mi < 0 || day < 1 || day > 31) continue;
+    out.push({ amount: parseNum(m[1]), date: { monthIdx: mi, day, year: m[4] ? parseInt(m[4], 10) : null } });
+  }
+  return out;
+}
+// Resolve a no-year discount-expiry date. A "through DATE" deadline is upcoming,
+// so anchor on the next occurrence on or after today; the conference start (when
+// it is a reliable future date) only pulls it back a year if the upcoming
+// occurrence would fall after the event. Null when it cannot be resolved.
+function resolveDate(d: DiscountDate, conferenceStart: string | null | undefined, now: Date): string | null {
+  if (d.year) { const iso = `${d.year}-${pad2(d.monthIdx + 1)}-${pad2(d.day)}`; return saneIso(iso) ? iso : null; }
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  let y = now.getUTCFullYear();
+  if (Date.UTC(y, d.monthIdx, d.day) < today) y += 1; // next upcoming occurrence
+  const cs = conferenceStart ? Date.parse(`${conferenceStart}T00:00:00Z`) : NaN;
+  if (!Number.isNaN(cs) && cs >= today && Date.UTC(y, d.monthIdx, d.day) > cs) y -= 1; // deadline precedes a future event
+  const iso = `${y}-${pad2(d.monthIdx + 1)}-${pad2(d.day)}`;
+  return saneIso(iso) ? iso : null;
+}
+
+// Narrow, fully grounded discount-with-expiry rule. For a priced tier whose block
+// shows a higher struck-through/was price and a "through DATE" phrase (block-local,
+// or a page-level "save X through DATE" whose amount equals this block's discount),
+// set price_after_deadline to the struck price and the deadline to that date. Only
+// touches tiers that do not already have an after-price; never reads timelines.
+export function applyDiscountDeadlines(
+  tiers: ExtractedTier[],
+  rawText: string,
+  opts: { conferenceStart?: string | null; window?: number; now?: Date } = {}
+): ExtractedTier[] {
+  const window = opts.window ?? 600;
+  const now = opts.now ?? new Date();
+  const ctx = buildContext(rawText);
+  const pageDiscounts = parsePageDiscounts(ctx.low);
+  return tiers.map((t) => {
+    if (t.price == null || Number.isNaN(t.price as number) || t.price === 0) return t;
+    if (t.price_after_deadline != null) return t;
+    const name = (t.name || "").trim();
+    if (!name) return t;
+    for (const ni of allIndexes(ctx.low, name.toLowerCase())) {
+      const blockLow = ctx.low.slice(Math.max(0, ni - window), Math.min(ctx.low.length, ni + window));
+      const struck = highestStruckPrice(blockLow, t.price as number);
+      if (struck == null) continue;
+      const discount = struck - (t.price as number);
+      let date = parseDatePhrase(blockLow);
+      if (!date) { const pd = pageDiscounts.find((p) => p.amount === discount); if (pd) date = pd.date; }
+      if (!date) continue; // the rule requires a grounded expiry phrase
+      const deadline = resolveDate(date, opts.conferenceStart, now);
+      return { ...t, price_after_deadline: struck, deadline, early_bird_end: deadline };
+    }
+    return t;
+  });
+}
+
 // Compact human-readable report for the admin draft view / extraction_notes.
 export function formatGroundingReport(report: GroundingReport): string {
   const lines: string[] = [];

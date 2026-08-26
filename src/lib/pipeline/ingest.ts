@@ -17,7 +17,7 @@ import {
   normalizeExtraction,
   validateExtraction,
 } from "./extract-schema";
-import { groundPricingTiers, formatGroundingReport, type GroundingReport } from "./grounding";
+import { groundPricingTiers, applyDiscountDeadlines, formatGroundingReport, type GroundingReport } from "./grounding";
 import { detectAcademicSignals, isAcademicLikely } from "./academic";
 import { assessCompleteness, detectPricingSignals } from "./completeness";
 import { makeSlug } from "@/lib/slug";
@@ -86,6 +86,13 @@ function hostOf(u: string): string {
   try { return new URL(u).host.replace(/^www\./, "").toLowerCase(); } catch { return ""; }
 }
 
+// A URL whose path already points at a dedicated tickets/registration/pricing
+// page. When the given URL is one of these, its scrape is already the pricing
+// page and needs no escalation.
+function isDedicatedPricingUrl(u: string): boolean {
+  try { return /(?:register|registration|tickets?|pricing|prices|passes)/i.test(new URL(u).pathname); } catch { return false; }
+}
+
 // Rank links by pricing-keyword match in the href, preferring same-domain pages.
 function rankPricingLinks(links: string[], baseUrl: string): string[] {
   const baseHost = hostOf(baseUrl);
@@ -148,6 +155,23 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   const baseFromGiven = normalizeExtraction(first.json);
   const g1 = ground(first.json, first.markdown);
   if (g1.tiers.length > 0) {
+    // If we landed on a non-pricing page that only showed a partial set, the
+    // dedicated tickets/registration page may hold the complete pricing. Fetch
+    // the top strong pricing link with the IDENTICAL scrape and keep whichever
+    // grounds more tiers, so the finder result matches a direct scrape.
+    if (!isDedicatedPricingUrl(givenUrl)) {
+      const strong = rankPricingLinks(first.links, givenUrl).find((u) => isDedicatedPricingUrl(u) && hostOf(u) === hostOf(givenUrl));
+      if (strong && !tried.includes(strong)) {
+        tried.push(strong);
+        calls++;
+        const c = await firecrawlScrape({ url: strong, schema, prompt, proxy: "basic", logger });
+        const g2 = ground(c.json, c.markdown);
+        if (g2.tiers.length > g1.tiers.length) {
+          logger.info("pricing.found", { from: "dedicated_pricing_page", url: strong, tiers: g2.tiers.length, over: g1.tiers.length });
+          return { pricingTiers: g2.tiers, report: g2.report, pricingMarkdown: c.markdown, baseFromGiven, pricingUrl: strong, tried, proxyUsed: "basic", firecrawlCalls: calls };
+        }
+      }
+    }
     logger.info("pricing.found", { from: "given", url: givenUrl, tiers: g1.tiers.length, dropped: g1.report.dropped.length });
     return { pricingTiers: g1.tiers, report: g1.report, pricingMarkdown: first.markdown, baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
   }
@@ -257,8 +281,12 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
   // labels with grounded dates on the page) collapses to current-window price +
   // next-window after-price + current window end date; otherwise the same-name /
   // per-cell collapse applies.
-  const pricingTiers: ExtractedTier[] = collapsePricingTiers(pricing.pricingTiers, pricing.pricingMarkdown);
+  const collapsedTiers: ExtractedTier[] = collapsePricingTiers(pricing.pricingTiers, pricing.pricingMarkdown);
   const base = mergeBase(cheap.base, pricing.baseFromGiven);
+
+  // Grounded struck-through discount deadlines (current price + higher was-price +
+  // "through DATE" in the same block) become price_after_deadline + deadline.
+  const pricingTiers: ExtractedTier[] = applyDiscountDeadlines(collapsedTiers, pricing.pricingMarkdown, { conferenceStart: base?.start_date });
 
   // Non-blocking academic-conference triage signal from the scraped text + items.
   const academicText = `${cheap.pageText}\n${pricing.pricingMarkdown}`;
