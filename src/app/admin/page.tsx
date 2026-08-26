@@ -489,10 +489,30 @@ function AdminTool() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchQ, setSearchQ] = useState("");
   const [toast, setToast] = useState(null);
+  const [pendingEditId, setPendingEditId] = useState(null);
 
   useEffect(() => {
     loadConferencesAsync().then(data => setConferences(data));
   }, []);
+
+  // Deep link: /admin?edit=<conferenceId> opens that conference straight in the
+  // editor. Used by the "Review draft" link on the Candidates page. Reads the id
+  // on mount, then opens it once the conference list has loaded and clears the URL.
+  useEffect(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get("edit");
+      if (id) setPendingEditId(id);
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    if (!pendingEditId || conferences.length === 0) return;
+    const conf = conferences.find(c => c.id === pendingEditId);
+    if (conf) { setEditingConf(conf); setView("edit"); }
+    else showToast("Draft conference not found", "error");
+    setPendingEditId(null);
+    try { window.history.replaceState({}, "", "/admin"); } catch (e) {}
+  }, [pendingEditId, conferences]);
 
   // Auto-expire conferences
   useEffect(() => {
