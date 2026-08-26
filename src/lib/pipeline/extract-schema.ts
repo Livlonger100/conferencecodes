@@ -16,11 +16,11 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
     pricing_tiers: {
       type: "array",
       description:
-        "Only include tiers and prices that literally appear on the page. If no ticket prices are shown, return an empty array. Never invent or estimate prices, names, or dates. If a ticket type shows several prices for different registration periods (e.g. Early Bird, Second Term, Final), output one item per period using the exact same name for each, with that period's price and its deadline. Do not merge or average them.",
+        "The actual purchasable passes/tickets a buyer selects, using their exact names as shown on the page (e.g. Startups Pass, All Access Pass, VIP Pass, Investors, Media). Only include tiers, names and prices that literally appear on the page. Capture free passes (price 0) when the page says Free. Do NOT output a price-increase timeline or rate-escalation schedule (rows like 'Early Rate', 'Standard Rate', 'Advance Rate', 'Late Rate', 'Final Rate' under a 'Registration Timeline') as separate tickets; those describe how ONE pass's price rises over time, not distinct products. Never invent or estimate prices, names, or dates. If a single ticket type genuinely shows several prices across registration periods, output one item per period using the exact same name for each, with that period's price and its deadline; do not merge or average them.",
       items: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Exact tier name from the page" },
+          name: { type: "string", description: "Exact pass/ticket name from the page" },
           price: { type: ["number", "null"], description: "Numeric amount that literally appears on the page, or null if no price is shown. Never estimate." },
           currency: { type: "string", description: "ISO 4217 code, e.g. USD, EUR, GBP" },
           is_early_bird: { type: "boolean" },
@@ -37,7 +37,7 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
 // Sent to Firecrawl's JSON extraction alongside the schema. The schema alone does
 // not carry a do-not-invent instruction, so this makes it explicit.
 export const EXTRACTION_JSON_PROMPT =
-  "Extract conference ticket pricing. Only include tiers and prices that literally appear on the page text. If no ticket prices are shown, return an empty pricing_tiers array. Never invent, estimate, or guess prices, tier names, or dates. If a ticket type shows several prices across different registration periods (for example Early Bird, Second Term, Final), return one entry per period using the exact same tier name for each, with that period's price and set deadline to the date that period ends. Do not average or merge them.";
+  "Extract the actual purchasable passes/tickets a buyer would select, using their exact names as shown on the page. Only include names and prices that literally appear on the page text. Capture free passes as price 0 when the page says Free. Do NOT treat a price-increase timeline or rate-escalation schedule (rows like Early Rate, Standard Rate, Advance Rate, Late Rate, Final Rate under a Registration Timeline) as separate tickets; that describes how one pass's price rises over time, not distinct products. If no ticket prices are shown, return an empty pricing_tiers array. Never invent, estimate, or guess prices, tier names, or dates. If a single ticket type genuinely shows several prices across registration periods, return one entry per period using the exact same tier name for each, with that period's price and set deadline to the date that period ends. Do not average or merge them.";
 
 export const EXTRACTION_SYSTEM = `You extract conference data for ConferenceCodes (AI conferences only).
 Return ONLY valid JSON matching the requested schema. No markdown, no prose.
@@ -149,66 +149,9 @@ export function hasUsablePricing(json: any): boolean {
   return tiers.some((t: any) => typeof t?.price === "number" && !Number.isNaN(t.price));
 }
 
-// ---- grounding: reject any value not present in the scraped page text -------
-
-// Collapse thousands separators so "1,399" / "1.399" / "1 399" all become "1399".
-function collapseThousands(text: string): string {
-  let s = (text || "").toLowerCase();
-  for (let i = 0; i < 3; i++) s = s.replace(/(\d)[.,\s](\d{3})(?=\D|$)/g, "$1$2");
-  return s;
-}
-
-// A price is grounded only if its number literally appears in the page text
-// (allowing currency symbol / thousands-separator variants). Free (0) tiers are
-// grounded if the page mentions "free" or a literal 0.
-export function priceAppearsInText(price: number, collapsedText: string): boolean {
-  const n = Math.round(price);
-  if (n === 0) return /\bfree\b/.test(collapsedText) || /(?<!\d)0(?!\d)/.test(collapsedText);
-  return new RegExp(`(?<!\\d)${n}(?!\\d)`).test(collapsedText);
-}
-
-const MONTHS_FULL = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
-const MONTHS_ABBR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-
-// A date is grounded if the ISO string, a month-name + day, or a dd/mm form
-// appears in the page text. Lenient enough to keep dates the page really shows.
-export function dateAppearsInText(dateIso: string | null, markdown: string): boolean {
-  if (!dateIso) return false;
-  const md = (markdown || "").toLowerCase();
-  if (md.includes(dateIso.toLowerCase())) return true;
-  const [y, m, d] = dateIso.split("-").map((x) => parseInt(x, 10));
-  if (!y || !m || !d) return false;
-  const hasMonth = md.includes(MONTHS_FULL[m - 1]) || md.includes(MONTHS_ABBR[m - 1]);
-  const hasDay = new RegExp(`\\b${d}(st|nd|rd|th)?\\b`).test(md);
-  if (hasMonth && hasDay) return true;
-  const dd = String(d).padStart(2, "0"), mm = String(m).padStart(2, "0");
-  return md.includes(`${dd}/${mm}`) || md.includes(`${dd}.${mm}`) || md.includes(`${dd}-${mm}`);
-}
-
-// Drop any tier whose numeric price is not present in the page text (fabricated),
-// and null out any tier date that is not present in the page text. Tiers with no
-// price are kept (nothing to fabricate) but do not count as grounded pricing.
-export function groundTiers(tiers: ExtractedTier[], markdown: string): ExtractedTier[] {
-  const collapsed = collapseThousands(markdown);
-  const out: ExtractedTier[] = [];
-  for (const t of tiers) {
-    if (t.price != null && !Number.isNaN(t.price) && !priceAppearsInText(t.price, collapsed)) {
-      continue; // ungrounded / fabricated price -> drop the tier
-    }
-    out.push({
-      ...t,
-      early_bird_start: dateAppearsInText(t.early_bird_start, markdown) ? t.early_bird_start : null,
-      early_bird_end: dateAppearsInText(t.early_bird_end, markdown) ? t.early_bird_end : null,
-      deadline: dateAppearsInText(t.deadline, markdown) ? t.deadline : null,
-    });
-  }
-  return out;
-}
-
-// At least one grounded numeric-priced tier remains.
-export function hasGroundedPricing(tiers: ExtractedTier[]): boolean {
-  return tiers.some((t) => t.price != null && !Number.isNaN(t.price as number));
-}
+// Price/name/date grounding now lives in the single shared module
+// ./grounding.ts (groundPricingTiers). Every extraction path calls it before
+// pricing is shown or persisted, so there is exactly one guarded route.
 
 // ---- collapse multi-time-window pricing into one tier per ticket type --------
 // A pricing grid (e.g. Early Bird / Second Term / Final for each ticket type)
