@@ -90,7 +90,17 @@ export interface ExtractionResult {
   tier: IngestTier | null; // which method produced the final pricing
   data: ExtractedConference | null;
   base?: ExtractedConference | null; // merged base + grounded pricing, present even when validation fails (for the Add New form)
+  academic?: AcademicAssessmentLike | null; // academic/predatory triage assessment
   errors: string[];
   completeness: Completeness | null;
   meta: ExtractionMeta;
+}
+
+// Mirror of AcademicAssessment (kept here to avoid a circular type import).
+export interface AcademicAssessmentLike {
+  signals: string[];
+  hasCommercialCapacity: boolean;
+  effectiveCount: number;
+  badge: boolean;
+  autoReject: boolean;
 }

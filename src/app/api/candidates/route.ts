@@ -31,8 +31,31 @@ export async function PATCH(req: NextRequest) {
   if (!Array.isArray(ids) || ids.length === 0) {
     return NextResponse.json({ error: "ids array required" }, { status: 400 });
   }
-  if (!["queue", "reject", "rescrape"].includes(action)) {
-    return NextResponse.json({ error: "action must be queue, reject, or rescrape" }, { status: 400 });
+  if (!["queue", "reject", "rescrape", "restore"].includes(action)) {
+    return NextResponse.json({ error: "action must be queue, reject, rescrape, or restore" }, { status: 400 });
+  }
+
+  // restore: bring a rejected candidate back. If it has a conference (an
+  // auto-rejected academic draft), flip that conference back to draft and the
+  // candidate to Drafted; otherwise return it to the Discovered queue.
+  if (action === "restore") {
+    const { data: rows, error: fErr } = await supabaseAdmin
+      .from("discovery_queue")
+      .select("id, conference_id")
+      .in("id", ids)
+      .eq("status", "rejected");
+    if (fErr) return NextResponse.json({ error: fErr.message }, { status: 500 });
+    const stamp = new Date().toISOString();
+    let restored = 0;
+    for (const r of rows ?? []) {
+      const hasConf = !!(r as any).conference_id;
+      if (hasConf) {
+        await supabaseAdmin.from("conferences").update({ status: "draft", updated_at: stamp }).eq("id", (r as any).conference_id);
+      }
+      await supabaseAdmin.from("discovery_queue").update({ status: hasConf ? "ingested" : "discovered", notes: null, updated_at: stamp }).eq("id", (r as any).id);
+      restored++;
+    }
+    return NextResponse.json({ ok: true, updated: restored, status: "restored" });
   }
 
   // queue: move discovered candidates into the internal scrape queue.

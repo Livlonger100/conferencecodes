@@ -13,7 +13,7 @@
 
 import { EXTRACTION_JSON_SCHEMA, EXTRACTION_JSON_PROMPT, normalizeExtraction, collapsePricingTiers } from "../src/lib/pipeline/extract-schema.ts";
 import { groundPricingTiers, applyDiscountDeadlines } from "../src/lib/pipeline/grounding.ts";
-import { detectAcademicSignals, isAcademicLikely } from "../src/lib/pipeline/academic.ts";
+import { assessAcademic } from "../src/lib/pipeline/academic.ts";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -31,15 +31,15 @@ function evaluate(fx: any) {
   const g = groundPricingTiers(normalizeExtraction(fx.json)?.pricing_tiers ?? [], fx.markdown);
   const collapsed = collapsePricingTiers(g.tiers, fx.markdown, NOW);
   const tiers = applyDiscountDeadlines(collapsed, fx.markdown, { conferenceStart: fx.start, now: NOW });
-  const signals = detectAcademicSignals({ pageText: fx.markdown, tierNames: tiers.map((t: any) => t.name), excludedNames: g.report.excluded.map((e: any) => e.name), conferenceName: "" });
-  return { tiers, academic: isAcademicLikely(signals) ? signals : null, excluded: g.report.excluded, resolvedUrl: fx.resolvedUrl, start: fx.start };
+  const a = assessAcademic({ pageText: fx.markdown, tierNames: tiers.map((t: any) => t.name), excludedNames: g.report.excluded.map((e: any) => e.name), conferenceName: fx.label || "", siteDomain: (() => { try { return new URL(fx.resolvedUrl).host; } catch { return ""; } })() });
+  return { tiers, academic: a.badge || a.autoReject ? `${a.autoReject ? "AUTO-REJECT" : "BADGE"} (${a.effectiveCount}): ${a.signals.join("; ")}` : null, excluded: g.report.excluded, resolvedUrl: fx.resolvedUrl, start: fx.start };
 }
 const tierLine = (t: any) => `${t.name} | ${t.currency || "?"} ${t.price === 0 ? "Free" : t.price}${t.price_after_deadline != null ? ` -> then ${t.price_after_deadline}` : ""}${t.deadline ? ` (after ${t.deadline})` : ""}`;
 const tierKey = (t: any) => `${t.name}=${t.price}/${t.price_after_deadline ?? "-"}@${t.deadline ?? "-"}`;
 function printResult(label: string, r: any) {
   console.log(`\n== ${label} ==`);
   console.log(`resolved: ${r.resolvedUrl}${r.start ? ` | start=${r.start}` : ""}`);
-  console.log(`ACADEMIC: ${r.academic ? "LIKELY -> " + r.academic.join("; ") : "no"}`);
+  console.log(`ACADEMIC: ${r.academic || "no"}`);
   console.log(`tiers (${r.tiers.length}):`);
   for (const t of r.tiers) console.log(`  - ${tierLine(t)}`);
   if (r.excluded.length) console.log(`  excluded: ${r.excluded.map((e: any) => `${e.name} [${e.keyword}]`).join("; ")}`);
