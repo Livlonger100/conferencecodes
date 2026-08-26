@@ -870,10 +870,10 @@ function AdminTool() {
                       <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{conf.name || "Untitled"}</div>
                       <div style={{ fontSize: 12, color: "#6b7280" }}>
                         {conf.city && conf.country ? `${conf.city}, ${conf.country}` : "Location TBD"}
-                        {conf.start && ` \u00b7 ${new Date(conf.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
-                        {conf.end && conf.end !== conf.start && ` \u2013 ${new Date(conf.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                        {duration && <span style={{ color: "#6b7280" }}> \u00b7 {duration} day{duration !== 1 ? "s" : ""}</span>}
-                        {daysAway !== null && daysAway > 0 && <span style={{ color: daysAway < 30 ? "#f97316" : "#64748b" }}> \u00b7 {daysAway}d away</span>}
+                        {conf.start && ` · ${new Date(conf.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                        {conf.end && conf.end !== conf.start && ` – ${new Date(conf.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                        {duration && <span style={{ color: "#6b7280" }}> · {duration} day{duration !== 1 ? "s" : ""}</span>}
+                        {daysAway !== null && daysAway > 0 && <span style={{ color: daysAway < 30 ? "#f97316" : "#64748b" }}> · {daysAway}d away</span>}
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -889,7 +889,7 @@ function AdminTool() {
                       )}
                       <div style={{ fontSize: 11, color: "#6b7280" }}>
                         {conf.pricing?.length || 0} tier{conf.pricing?.length !== 1 ? "s" : ""}
-                        {conf.hotels?.length > 0 && ` \u00b7 ${conf.hotels.length} hotel${conf.hotels.length !== 1 ? "s" : ""}`}
+                        {conf.hotels?.length > 0 && ` · ${conf.hotels.length} hotel${conf.hotels.length !== 1 ? "s" : ""}`}
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
                         <button onClick={e => { e.stopPropagation(); setEditingConf(conf); setView("edit"); }} style={S.btnGhost}>Edit</button>
