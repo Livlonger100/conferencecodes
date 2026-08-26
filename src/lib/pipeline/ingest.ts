@@ -18,7 +18,7 @@ import {
   validateExtraction,
 } from "./extract-schema";
 import { groundPricingTiers, applyDiscountDeadlines, formatGroundingReport, type GroundingReport } from "./grounding";
-import { detectAcademicSignals, isAcademicLikely } from "./academic";
+import { assessAcademic, type AcademicAssessment } from "./academic";
 import { assessCompleteness, detectPricingSignals } from "./completeness";
 import { makeSlug } from "@/lib/slug";
 import type { JobLogger } from "./log";
@@ -91,6 +91,29 @@ function hostOf(u: string): string {
 // page and needs no escalation.
 function isDedicatedPricingUrl(u: string): boolean {
   try { return /(?:register|registration|tickets?|pricing|prices|passes)/i.test(new URL(u).pathname); } catch { return false; }
+}
+
+// How many OTHER conferences already sit on the same registrable domain (a
+// predatory-network signal: many unrelated events hosted on one domain).
+async function countSameDomainConferences(host: string, selfUrl: string, logger: JobLogger): Promise<number> {
+  try {
+    const reg = host.replace(/^www\./, "").split(".").slice(-2).join(".");
+    const { data } = await supabaseAdmin.from("conferences").select("source_url");
+    if (!data) return 0;
+    const others = new Set<string>();
+    for (const r of data) {
+      const u = (r as any).source_url as string;
+      if (!u || u === selfUrl) continue;
+      try {
+        const h = new URL(u).host.replace(/^www\./, "").split(".").slice(-2).join(".");
+        if (h === reg) others.add(u);
+      } catch { /* skip */ }
+    }
+    return others.size;
+  } catch (e: any) {
+    logger.warn("academic.same_domain_query_failed", { error: e?.message });
+    return 0;
+  }
 }
 
 // Rank links by pricing-keyword match in the href, preferring same-domain pages.
@@ -288,16 +311,24 @@ export async function runExtraction(url: string, logger: JobLogger, opts: { forc
   // "through DATE" in the same block) become price_after_deadline + deadline.
   const pricingTiers: ExtractedTier[] = applyDiscountDeadlines(collapsedTiers, pricing.pricingMarkdown, { conferenceStart: base?.start_date });
 
-  // Non-blocking academic-conference triage signal from the scraped text + items.
+  // Academic / predatory-network triage. 3+ effective signals auto-reject the
+  // candidate (still restorable); 2 keep it as a badged draft. Commercial capacity
+  // (exhibitor/sponsor/booth) reduces the effective count by one.
   const academicText = `${cheap.pageText}\n${pricing.pricingMarkdown}`;
-  const academicSignals = detectAcademicSignals({
+  const siteDomain = base?.official_url ? hostOf(base.official_url) : "";
+  const sameDomainOthers = siteDomain ? await countSameDomainConferences(siteDomain, base?.official_url || "", logger) : 0;
+  const academic = assessAcademic({
     pageText: academicText,
     tierNames: pricingTiers.map((t) => t.name),
     excludedNames: (pricing.report?.excluded ?? []).map((e) => e.name),
     conferenceName: base?.title || "",
+    siteDomain,
+    sameDomainOthers,
   });
-  const academicLine = isAcademicLikely(academicSignals)
-    ? `ACADEMIC LIKELY (${academicSignals.length} signals): ${academicSignals.join("; ")}\n`
+  const academicLine = academic.autoReject
+    ? `AUTO-REJECTED academic/predatory (${academic.effectiveCount} effective signals): ${academic.signals.join("; ")}${academic.hasCommercialCapacity ? " [has commercial capacity]" : ""}\n`
+    : academic.badge
+    ? `ACADEMIC LIKELY (${academic.effectiveCount} signals): ${academic.signals.join("; ")}${academic.hasCommercialCapacity ? " [has commercial capacity]" : ""}\n`
     : "";
 
   // Evidence-based signals: a mechanical grounding report and a grounded/proposed
@@ -335,10 +366,10 @@ export async function runExtraction(url: string, logger: JobLogger, opts: { forc
     // When no pricing page worked, record which pages were tried so it is visible.
     const finalErrors = pricing.pricingUrl ? errors : [...errors, `pricing pages tried: ${pricing.tried.join(", ")}`];
     logger.info("extraction.invalid", { url, errors: finalErrors });
-    return { ok: false, tier: "tier2", data: null, base: data, errors: finalErrors, completeness, meta };
+    return { ok: false, tier: "tier2", data: null, base: data, academic, errors: finalErrors, completeness, meta };
   }
-  logger.info("extraction.valid", { url, note: completeness.note });
-  return { ok: true, tier: "tier2", data, base: data, errors: [], completeness, meta };
+  logger.info("extraction.valid", { url, note: completeness.note, academicEffective: academic.effectiveCount, autoReject: academic.autoReject });
+  return { ok: true, tier: "tier2", data, base: data, academic, errors: [], completeness, meta };
 }
 
 // ---- write conference + pricing tiers --------------------------------------
@@ -409,7 +440,7 @@ function computeNextRecrawl(data: ExtractedConference): string {
 // matching the existing /api/conferences behavior.
 export async function writeConference(
   data: ExtractedConference,
-  meta: { sourceCandidate: Candidate; completeness: Completeness; extraction: ExtractionMeta },
+  meta: { sourceCandidate: Candidate; completeness: Completeness; extraction: ExtractionMeta; autoReject?: boolean },
   logger: JobLogger
 ): Promise<string> {
   const nextRecrawl = computeNextRecrawl(data);
@@ -419,7 +450,9 @@ export async function writeConference(
   // held as EXPIRED and a far-future one as ARCHIVED, so neither can be
   // accidentally published or appear in the normal draft review list.
   const window = dateWindowStatus(data.start_date, data.end_date);
-  const status = window === "past" ? "expired" : window === "out_of_window" ? "archived" : "draft";
+  // Academic/predatory auto-reject holds the conference as "rejected" (data kept,
+  // not a draft, not public) so it can be restored to draft in one click.
+  const status = meta.autoReject ? "rejected" : window === "past" ? "expired" : window === "out_of_window" ? "archived" : "draft";
   const dateNote =
     window === "past"
       ? " | DATE: event date is in the past, held as expired (not publishable)"
@@ -555,25 +588,29 @@ export async function runIngestBatch(
         continue;
       }
 
+      const autoReject = !!extraction.academic?.autoReject;
       const conferenceId = await writeConference(
         extraction.data,
-        { sourceCandidate: candidate, completeness: extraction.completeness!, extraction: extraction.meta },
+        { sourceCandidate: candidate, completeness: extraction.completeness!, extraction: extraction.meta, autoReject },
         logger
       );
 
+      const rejectNote = autoReject
+        ? `Auto-rejected: academic/predatory (${extraction.academic!.effectiveCount} effective signals): ${extraction.academic!.signals.join("; ")}`
+        : null;
       await supabaseAdmin
         .from("discovery_queue")
         .update({
-          status: "ingested",
+          status: autoReject ? "rejected" : "ingested",
           conference_id: conferenceId,
           tier_used: extraction.tier,
-          notes: extraction.completeness?.note ?? null,
+          notes: rejectNote ?? extraction.completeness?.note ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", candidate.id);
 
-      logger.info("ingest.success", { id: candidate.id, conferenceId, tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete });
-      results.push({ id: candidate.id, name: candidate.name, status: "ingested", tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete });
+      logger.info(autoReject ? "ingest.auto_rejected" : "ingest.success", { id: candidate.id, conferenceId, autoReject, signals: extraction.academic?.effectiveCount });
+      results.push({ id: candidate.id, name: candidate.name, status: autoReject ? "rejected" : "ingested", tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete, reason: rejectNote ?? undefined });
     } catch (e: any) {
       const reason = e?.message || "unexpected error";
       await supabaseAdmin

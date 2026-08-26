@@ -94,6 +94,16 @@ function CandidatesTool() {
     else showToast(data.error || "Action failed", "error");
   };
 
+  // Restore a rejected candidate (auto-rejected academic -> back to Drafted).
+  const restore = async (ids) => {
+    if (!ids.length) return;
+    const res = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, action: "restore" }) });
+    if (res.status === 401) return sessionExpired();
+    const data = await res.json();
+    if (res.ok) { showToast(`Restored: ${data.updated}`, "success"); load(status); }
+    else showToast(data.error || "Action failed", "error");
+  };
+
   // Queue the selected candidates (discovered -> queue, or drafted/failed ->
   // re-scrape) and then scrape them into drafts, looping batches until done.
   const scrapeMany = async (ids, action) => {
@@ -291,7 +301,10 @@ function CandidatesTool() {
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
                 )}
                 {status === "rejected" && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
+                    <button style={S.btnGreen} disabled={!!running} onClick={() => restore([c.id])}>{c.conference_id ? "Restore to Drafted" : "Restore"}</button>
+                  </div>
                 )}
               </div>
             </div>
