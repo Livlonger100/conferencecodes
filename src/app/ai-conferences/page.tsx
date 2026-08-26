@@ -82,6 +82,9 @@ export default async function AIConferencesPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
           {conferences.map((conf) => {
             const price = conf.earlyBird ?? conf.price;
+            // A real grounded free tier (price exactly 0) reads as Free; an
+            // unknown/absent price (no 0 tier) is not treated as free.
+            const isFree = price === 0 && (conf.pricingTiers || []).some((t: any) => t.price === 0);
             return (
               <a key={conf.id} href={`/conference/${conf.slug}`} className="conf-card" style={{ display: "block", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
                 <div className="aic-card-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24 }}>
@@ -98,9 +101,11 @@ export default async function AIConferencesPage() {
                     <p style={{ fontSize: 14, color: "#374151", margin: 0, lineHeight: 1.5 }}>{conf.description}</p>
                   </div>
                   <div className="aic-card-cta" style={{ textAlign: "right", flexShrink: 0 }}>
-                    {price > 0 && (
+                    {isFree ? (
+                      <div style={{ fontSize: 24, fontWeight: 800, color: "#22c55e", marginBottom: 4 }}>Free</div>
+                    ) : price > 0 ? (
                       <div style={{ fontSize: 24, fontWeight: 800, color: "#f97316", marginBottom: 4 }}>{formatPrice(price)}</div>
-                    )}
+                    ) : null}
                     {conf.earlyBird && (
                       <div style={{ fontSize: 11, color: "#f97316", marginBottom: 8 }}>Early bird</div>
                     )}
