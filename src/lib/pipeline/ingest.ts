@@ -277,7 +277,7 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
   if (!base) {
     await tier3(url, logger); // final hook; returns null today
     const completeness = assessCompleteness({ pricingMethod: "tier2", tiers: pricingTiers, signals });
-    return { ok: false, tier: "tier2", data: null, errors: ["no usable extraction (cheap fetch and Firecrawl both empty)"], completeness, meta };
+    return { ok: false, tier: "tier2", data: null, base: null, errors: ["no usable extraction (cheap fetch and Firecrawl both empty)"], completeness, meta };
   }
 
   const data: ExtractedConference = { ...base, pricing_tiers: pricingTiers };
@@ -289,10 +289,10 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
     // When no pricing page worked, record which pages were tried so it is visible.
     const finalErrors = pricing.pricingUrl ? errors : [...errors, `pricing pages tried: ${pricing.tried.join(", ")}`];
     logger.info("extraction.invalid", { url, errors: finalErrors });
-    return { ok: false, tier: "tier2", data: null, errors: finalErrors, completeness, meta };
+    return { ok: false, tier: "tier2", data: null, base: data, errors: finalErrors, completeness, meta };
   }
   logger.info("extraction.valid", { url, note: completeness.note });
-  return { ok: true, tier: "tier2", data, errors: [], completeness, meta };
+  return { ok: true, tier: "tier2", data, base: data, errors: [], completeness, meta };
 }
 
 // ---- write conference + pricing tiers --------------------------------------

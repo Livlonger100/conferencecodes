@@ -225,90 +225,10 @@ const STATUS_COLORS = {
   archived: { bg: "rgba(100,116,139,0.1)", border: "rgba(100,116,139,0.3)", text: "#64748b" },
 };
 
-// ============================================================
-// EXTRACTION PROMPT — sent to Claude API
-// ============================================================
-const EXTRACTION_SYSTEM = `You are a conference data extraction assistant for ConferenceCodes.com. 
-Given a conference website URL, extract ALL available information and return ONLY valid JSON (no markdown, no backticks, no explanation).
-
-Return this exact structure:
-{
-  "name": "Conference Name",
-  "organizer": "Organizing Company/Entity",
-  "description": "2-3 sentence description of the conference",
-  "category": "AI / Tech" or "Other",
-  "city": "City",
-  "country": "Country",
-  "region": "North America" or "Europe" or "Asia" or "Global" or "Other",
-  "venue": "Venue name if found",
-  "start": "YYYY-MM-DD",
-  "end": "YYYY-MM-DD",
-  "format": "In-person" or "Virtual" or "Hybrid",
-  "language": "English" or "German" or "English/German" etc - the language(s) presentations are given in,
-  "pricing": [
-    {
-      "tier": "Use exact tier name from website",
-      "price": 1234 or null,
-      "currency": "USD",
-      "deadline": "YYYY-MM-DD or null",
-      "deadline_passed": true or false,
-      "days_included": "all" or "Monday only" or "Day 1" etc,
-      "requires_approval": false,
-      "notes": "any relevant notes"
-    }
-  ],
-  "speakers": ["Speaker Name 1", "Speaker Name 2"],
-  "attendees": 500 or null,
-  "tags": ["tag1", "tag2"],
-  "hotels": [
-    {
-      "name": "Hotel Name",
-      "stars": 4,
-      "conf_rate": 189,
-      "rack_rate": 299,
-      "currency": "USD",
-      "book_by": "YYYY-MM-DD",
-      "distance": "0.2 mi",
-      "booking_url": "https://...",
-      "group_code": "CODE123 or null"
-    }
-  ],
-  "organizer_contact": {
-    "name": "contact person name if found",
-    "role": "their role/title if found",
-    "email": "email if found",
-    "phone": "phone if found",
-    "website": "main URL",
-    "affiliate": "yes" or "no" or "unknown",
-    "affiliate_details": "affiliate program details if found (commission rate, platform, etc.)"
-  },
-  "extraction_notes": "Any issues encountered, fields you couldn't find, pages you checked"
-}
-
-CRITICAL PRICING AND TIER RULES:
-- ONLY extract tiers that are EXPLICITLY listed on the conference website. NEVER invent, infer, or add tiers that are not visible on the page (e.g. do not add a "Student" tier just because many conferences have one).
-- Extract the actual purchasable passes/tickets (e.g. Startups Pass, All Access Pass, VIP Pass, Investors, Media). Do NOT treat a price-increase timeline or rate-escalation schedule (rows like "Early Rate", "Standard Rate", "Advance Rate", "Late Rate", "Final Rate" under a "Registration Timeline") as separate ticket tiers; those describe how one pass's price rises over time, not distinct products.
-- Use the EXACT tier name as shown on the website. Do not rename, embellish, or "improve" tier names. If the site says "Early Bird", use "Early Bird" — not "Super Early Bird", not "Early Access", not any variation.
-- Extract ALL tiers that ARE visible, including expensive/premium tiers. Do not skip high-priced tiers.
-- If a tier has expandable details (e.g. "More info" links), note in extraction_notes what you could and couldn't see.
-- NEVER guess, estimate, or fabricate a price. If the actual dollar/euro/pound amount is not explicitly shown on the page, set price to null.
-- Many ticketing platforms (Luma, Eventbrite, etc.) load prices via JavaScript that you cannot see. If you see tier names but no dollar amounts, set each price to null and note this in extraction_notes.
-- Always include Early Bird tiers even if the deadline has passed. Set deadline_passed to true if the deadline has passed or if the page says "Sales ended". The early bird price is still valuable historical data.
-- Extract every tier that appears on the page. Do not add any tier that is not explicitly listed.
-- If a tier requires approval (e.g. "Require Approval" on Luma), set requires_approval to true
-- If a tier is free (e.g. press passes, some virtual tickets), set price to 0
-- If the conference allows per-day attendance, create separate pricing entries for each day option
-
-OTHER RULES:
-- For hotels, check pages labeled Travel, Venue, Accommodation, Hotel, or Where to Stay
-- Dates must be in YYYY-MM-DD format
-- Prices must be numbers without currency symbols, or null if unknown
-- If a field cannot be found, use null
-- NEVER label a tier as "Early Bird" unless the page explicitly uses the words "Early Bird" or "Early-Bird". A discounted price shown with a strikethrough original price does NOT mean it is an early bird price — it may simply be the current promotional price or the standard price with a comparison to list price.
-- Look for affiliate/partner program pages — check footer links, "Partners", "Affiliates", "Become a Partner" pages. If found, set affiliate to "yes" and capture commission details.
-- For contact info, look for specific people (Head of Partnerships, Marketing Director, etc.) not just generic info@ emails. Check "Contact", "About", "Team" pages.
-- CRITICAL DATE RULE: Many conference sites show dates from MULTIPLE editions (past and upcoming). ONLY extract dates for the NEXT UPCOMING edition (the one in the future, closest to today's date which is ${new Date().toISOString().split("T")[0]}). Ignore all past edition dates. Look for the most prominent/hero date on the page — that is usually the upcoming edition.
-- Return ONLY the JSON object, nothing else`;
+// Extraction now runs entirely through the shared pipeline at /api/extract
+// (Firecrawl fetch + shared extraction prompt + grounding gate + pricing-page
+// finder), the same route Scrape / Bulk Import / Re-scrape use. There is no
+// longer a separate Add New prompt or fetch here.
 
 // ============================================================
 // MAIN APP
@@ -541,124 +461,82 @@ function AdminTool() {
   const handleExtract = async () => {
     if (!extractUrl.trim()) return;
     setExtracting(true);
-    setExtractStatus("Fetching conference page...");
+    setExtractStatus("Fetching and grounding via the pricing pipeline (this can take a minute)...");
     setExtractedData(null);
 
+    const urls = extractUrl.trim().split(/[\n,]+/).map((u: string) => u.trim()).filter(Boolean);
+    const url = urls[0] || extractUrl.trim();
     try {
-      setExtractStatus("Sending to Claude for extraction...");
+      // Same single route as Scrape / Bulk Import / Re-scrape: Firecrawl fetch,
+      // shared extraction prompt, grounding gate, and pricing-page finder.
       const response = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system: EXTRACTION_SYSTEM,
-          messages: [{
-            role: "user",
-            content: `Extract all conference data from these URLs:\n${extractUrl.trim().split(/[\n,]+/).map((u: string) => u.trim()).filter(Boolean).join("\n")}\n\nCRITICAL INSTRUCTIONS:\n1. Visit EACH URL provided above\n2. ALSO try visiting these common subpages by appending to the base domain: /registration, /register, /pricing, /tickets, /attend, /speakers, /travel, /hotels, /accommodation, /venue, /about, /contact\n3. The PRICING is often NOT on the main page — it is usually on a separate registration or tickets page. You MUST check the registration page.\n4. Look for links containing words like "Register", "Attend", "Tickets", "Pricing", "Book" and follow them.\n5. Return ONLY valid JSON.`
-          }],
-          tools: [{
-            type: "web_search_20250305",
-            name: "web_search"
-          }],
-        }),
+        body: JSON.stringify({ url }),
       });
-
+      if (response.status === 401) { setExtractStatus("Session expired. Please sign in again."); return; }
       const data = await response.json();
-      setExtractStatus("Parsing extracted data...");
+      if (!response.ok) throw new Error(data.error || "Extraction failed");
 
-      // Combine all text blocks
-      const fullText = data.content
-        .map(item => (item.type === "text" ? item.text : ""))
-        .filter(Boolean)
-        .join("\n");
-
-      // Parse JSON from response
-      const clean = fullText.replace(/```json|```/g, "").trim();
-      // Find the JSON object in the response
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in response");
-
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      // Normalize the extracted data into our internal format
-      const urls = extractUrl.trim().split(/[\n,]+/).map(u => u.trim()).filter(Boolean);
+      const b = data.base || {};
       const normalized = {
         id: `conf_${Date.now()}`,
-        source_url: urls[0] || extractUrl.trim(),
-        name: parsed.name || "",
-        organizer: parsed.organizer || "",
-        description: parsed.description || "",
-        category: parsed.category || "Other",
-        city: parsed.city || "",
-        country: parsed.country || "",
-        region: parsed.region || "Other",
-        venue: parsed.venue || "",
-        start: parsed.start || "",
-        end: parsed.end || "",
-        format: parsed.format || "In-person",
-        // Only grounded pricing (verified against the fetched page text by the
-        // shared grounding gate) is used. If nothing grounded, pricing is empty
-        // and can be entered manually. Never fall back to ungrounded model pricing.
-        pricing: ((data.grounded?.pricing) || []).map((p, i) => ({
+        source_url: b.official_url || url,
+        name: b.name || "",
+        organizer: "",
+        description: b.description || "",
+        category: b.category || "AI / Tech",
+        city: b.city || "",
+        country: b.country || "",
+        region: "Other",
+        venue: "",
+        start: b.start || "",
+        end: b.end || "",
+        format: "In-person",
+        // Grounded pricing only, from the shared gate. price_after_deadline is
+        // carried through so collapsed multi-window tiers keep their rise price.
+        pricing: (data.pricing || []).map((p, i) => ({
           id: `tier_${i}`,
           tier: p.tier || "Standard",
           price: p.price === undefined ? null : p.price,
+          price_after_deadline: p.price_after_deadline ?? null,
           currency: p.currency || "USD",
           deadline: p.deadline || null,
-          deadline_passed: p.deadline_passed || false,
-          days_included: p.days_included || "all",
-          requires_approval: p.requires_approval || false,
-          notes: p.notes || "",
+          deadline_passed: false,
+          days_included: "all",
+          requires_approval: false,
+          notes: "",
         })),
-        speakers: parsed.speakers || [],
-        attendees: parsed.attendees || null,
-        tags: parsed.tags || [],
-        hotels: (parsed.hotels || []).map((h, i) => ({
-          id: `hotel_${i}`,
-          name: h.name || "",
-          stars: h.stars || 3,
-          conf_rate: h.conf_rate || 0,
-          rack_rate: h.rack_rate || 0,
-          currency: h.currency || "USD",
-          book_by: h.book_by || "",
-          distance: h.distance || "",
-          booking_url: h.booking_url || "",
-          group_code: h.group_code || "",
-        })),
-        organizer_contact: parsed.organizer_contact || {},
-        discount_code: "",
-        discount_pct: 0,
-        discount_type: "percentage",
-        discount_max_uses: null,
-        discount_uses: 0,
+        speakers: [], attendees: null, tags: [], hotels: [], organizer_contact: {},
+        discount_code: "", discount_pct: 0, discount_type: "percentage",
+        discount_max_uses: null, discount_uses: 0,
         status: "draft",
         // Mechanical grounding evidence replaces the model prose + confidence.
-        extraction_notes: data.grounded?.note || "No pricing could be grounded against the page text.",
+        extraction_notes: data.groundingNote || (data.errors?.length ? data.errors.join("; ") : "No pricing could be grounded against the page text."),
         created_at: new Date().toISOString(),
         last_verified: new Date().toISOString(),
         confidence: null,
       };
 
       setExtractedData(normalized);
-      setExtractStatus("Extraction complete — review below");
+      setExtractStatus((data.pricing || []).length ? "Extraction complete, review below" : "No grounded pricing found. Review base fields and add pricing manually if needed.");
     } catch (err) {
-      console.error("Extraction error:", err);
       setExtractStatus(`Error: ${err.message}. You can still create the conference manually.`);
-      // Provide empty template for manual entry
       setExtractedData({
         id: `conf_${Date.now()}`,
-        source_url: extractUrl.trim(),
-        name: "", organizer: "", description: "", category: "Other",
+        source_url: url,
+        name: "", organizer: "", description: "", category: "AI / Tech",
         city: "", country: "", region: "Other", venue: "",
         start: "", end: "", format: "In-person",
-        pricing: [{ id: "tier_0", tier: "Standard", price: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "all", requires_approval: false, notes: "" }],
+        pricing: [{ id: "tier_0", tier: "Standard", price: null, price_after_deadline: null, currency: "USD", deadline: null, deadline_passed: false, days_included: "all", requires_approval: false, notes: "" }],
         speakers: [], attendees: null, tags: [],
         hotels: [], organizer_contact: {},
         discount_code: "", discount_pct: 0, discount_type: "percentage",
         discount_max_uses: null, discount_uses: 0,
-        status: "draft", extraction_notes: "Manual entry — extraction failed",
+        status: "draft", extraction_notes: "Manual entry, extraction failed",
         created_at: new Date().toISOString(),
         last_verified: new Date().toISOString(),
-        confidence: 0,
+        confidence: null,
       });
     } finally {
       setExtracting(false);

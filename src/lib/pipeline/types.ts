@@ -89,6 +89,7 @@ export interface ExtractionResult {
   ok: boolean;
   tier: IngestTier | null; // which method produced the final pricing
   data: ExtractedConference | null;
+  base?: ExtractedConference | null; // merged base + grounded pricing, present even when validation fails (for the Add New form)
   errors: string[];
   completeness: Completeness | null;
   meta: ExtractionMeta;

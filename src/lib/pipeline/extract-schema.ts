@@ -213,16 +213,20 @@ export function collapseTimeWindows(tiers: ExtractedTier[], now: Date = new Date
     const group = groups.get(key)!;
     const priced = group.filter((t) => t.price != null && !Number.isNaN(t.price as number));
     const distinctDates = new Set(priced.map(windowEndMs).filter((v) => v != null)).size;
+    // Rows with the identical exact name and different prices are the same ticket
+    // at two price points (early/later or was/now), even when the page exposes no
+    // per-window dates. Those collapse too, ordered cheapest (current) first.
+    const sameExactName = new Set(priced.map((t) => (t.name || "").trim().toLowerCase())).size === 1;
 
-    // Only collapse a genuine time-window grid: 2+ priced windows spanning 2+
-    // distinct dates. Anything else is left exactly as-is (no merging).
-    if (priced.length < 2 || distinctDates < 2) {
+    // Collapse a genuine time-window grid (2+ priced windows across 2+ dates) or a
+    // pair of identical-named priced rows. Anything else is left exactly as-is.
+    if (priced.length < 2 || (distinctDates < 2 && !sameExactName)) {
       for (const t of group) out.push(t);
       continue;
     }
 
     const dated = priced.filter((t) => windowEndMs(t) != null).sort((a, b) => windowEndMs(a)! - windowEndMs(b)!);
-    const undated = priced.filter((t) => windowEndMs(t) == null);
+    const undated = priced.filter((t) => windowEndMs(t) == null).sort((a, b) => (a.price as number) - (b.price as number));
     // Drop windows whose deadline has already passed. Ordered remaining windows:
     // soonest still-open deadline first, then any undated (open/onsite) window.
     const futureDated = dated.filter((t) => windowEndMs(t)! >= today);
