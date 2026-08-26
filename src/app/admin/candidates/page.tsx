@@ -254,6 +254,9 @@ function CandidatesTool() {
                 {(status === "ingested" || status === "failed") && (
                   rowResults[c.id] ? <RowResult id={c.id} /> : (
                     <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                      {status === "ingested" && c.conference_id && (
+                        <a href={`/admin?edit=${c.conference_id}`} style={{ ...S.btnGreen, background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)", color: "#f97316", textDecoration: "none", display: "inline-block" }}>Review draft</a>
+                      )}
                       <button style={{ ...S.btnGreen, opacity: running ? 0.6 : 1 }} disabled={!!running} onClick={() => scrapeOne(c.id, "rescrape")}>{scrapingId === c.id ? "Re-scraping..." : "Re-scrape"}</button>
                     </div>
                   )
