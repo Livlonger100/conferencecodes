@@ -1,0 +1,56 @@
+{
+  "id": "bigdata",
+  "label": "Big Data London",
+  "seedUrl": "https://bigdataldn.com",
+  "resolvedUrl": "https://www.bigdataldn.com/en-gb/tickets.html",
+  "start": "2023-09-23",
+  "json": {
+    "title": "Big Data LDN",
+    "description": "Join us for the UK’s largest data, AI & analytics event at Olympia London on September 23–24. With over 300 expert speakers and numerous networking opportunities, the event promises to be an invaluable experience for attendees.",
+    "city": "London",
+    "country": "UK",
+    "official_url": "https://www.bigdataldn.com/en-gb/register.html",
+    "start_date": "2023-09-23",
+    "end_date": "2023-09-24",
+    "pricing_tiers": [
+      {
+        "name": "BDL Visitor Pass",
+        "price": 0,
+        "currency": "GBP",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2023-08-28"
+      },
+      {
+        "name": "BDL Plus Pass",
+        "price": 339,
+        "currency": "GBP",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2023-08-28"
+      },
+      {
+        "name": "BDL Plus Pass",
+        "price": 389,
+        "currency": "GBP",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": null
+      },
+      {
+        "name": "Data Driven LDN",
+        "price": 499,
+        "currency": "GBP",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": null
+      }
+    ]
+  },
+  "markdown": "![](https://www.bigdataldn.com/content/dam/sitebuilder/rxuk/bdl/images/banners/bdl-generic-background-1920x1920.jpg/_jcr_content/renditions/original.image_file.1919.1919.file/bdl-generic-background-1920x1920.jpg)\n\n# Get your ticket\n\nWhether you're a BDL veteran or visiting us for the first time, we can't wait to welcome you!\n\n## BDL Visitor Pass\n\n### FREE  £49 from 28th August\n\n[Register now](https://www.bigdataldn.com/en-gb/register.html?cat=visitor&ct=U2FsdGVkX1+BuZiAN6r1OKEQE/mBFTmlMfqdHO8jmpo=&t=m)\n\nNetwork, learn, and build connections at the UK’s largest data, AI & analytics event:\n\n- 300+ expert speakers\n- 16 theatres\n- 200+ exhibitors\n- Live demos and use cases\n- Network with experts\n\n**Olympia London, 23–24 September**\n\n## Maximum Comfort\n\n## BDL Plus Pass\n\n### £339  £389 from 28th August\n\n[Upgrade your experience](https://www.bigdataldn.com/en-gb/register.html?cat=visitor-plus&ct=U2FsdGVkX1+BuZiAN6r1OKEQE/mBFTmlMfqdHO8jmpo=)\n\nEnhance your Big Data LDN experience with access designed for greater comfort and convenience:\n\n- Exclusive Plus Pass lounge\n- Buffet lunch included\n- Barista coffee & hot drinks\n- Networking & workspace\n- Priority access to seminar recordings\n\n**Olympia London, 23–24 September**\n\n## Maximum Insights\n\n## Data Driven LDN\n\n### £499  **excl. VAT**\n\n[Register now](https://www.bigdataldn.com/en-gb/register.html?cat=conference-delegate&ct=U2FsdGVkX1+m5Z1V07n9zaSqCPAr/NMIg2f7hi0krr2vtIzs4ggK6ZwN65be1mpn&t=m)\n\nOne day before BDL, join fellow data leaders to kick your knowledge into top gear:\n\n- Longer deep-dive sessions\n- Senior-level networking\n- Vendor-neutral insights\n- Includes BDL Visitor Pass\n- [View the agenda](https://www.bigdataldn.com/en-gb/visit/data-driven-ldn.html)\n\n**Clayton Hotel, Chiswick, Tuesday 22 September**\n\n## **Press Pass**\n\nAll Press applications are subject to a strict vetting process.\n\n[Apply now](https://www.bigdataldn.com/en-gb/register.html?cat=press&ct=U2FsdGVkX193qH7P3XUpvVkNDkfZR5sMx42CafZisEk=&t=m)\n\n## **Not sure which ticket?**\n\nFor any questions related to registration, please contact our Customer Services team who will be happy to help.\n\n[Contact us](https://www.bigdataldn.com/en-gb/forms/customer-service-form.html)",
+  "capturedAt": "2026-08-26T15:54:54.417Z"
+}

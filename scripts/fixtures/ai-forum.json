@@ -1,0 +1,209 @@
+{
+  "id": "ai-forum",
+  "label": "AI & ML Forum (academic grid)",
+  "seedUrl": "https://artificialintelligence-forum.com/registration.php",
+  "resolvedUrl": "https://artificialintelligence-forum.com/registration.php",
+  "start": "2026-02-28",
+  "json": {
+    "title": "Artificial Intelligence Forum Conference 2026",
+    "description": "Join leading experts and researchers at the Artificial Intelligence Forum Conference 2026, featuring presentations, networking opportunities, and access to exclusive sessions. Perfect for academics, industry professionals, and students alike.",
+    "city": "",
+    "country": "",
+    "official_url": "https://artificialintelligence-forum.com/",
+    "start_date": "2026-02-28",
+    "end_date": "2026-10-03",
+    "pricing_tiers": [
+      {
+        "name": "Oral/Poster Presentation",
+        "price": 699,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "Oral/Poster Presentation",
+        "price": 849,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "Oral/Poster Presentation",
+        "price": 949,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      },
+      {
+        "name": "Student Participation (Oral/Poster)",
+        "price": 449,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "Student Participation (Oral/Poster)",
+        "price": 599,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "Student Participation (Oral/Poster)",
+        "price": 699,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      },
+      {
+        "name": "Bussiness - Delegate/Listener",
+        "price": 799,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "Bussiness - Delegate/Listener",
+        "price": 899,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "Bussiness - Delegate/Listener",
+        "price": 999,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      },
+      {
+        "name": "Academic - Delegate/Listener",
+        "price": 499,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "Academic - Delegate/Listener",
+        "price": 599,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "Academic - Delegate/Listener",
+        "price": 699,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      },
+      {
+        "name": "Virtual Particiption (oral/poster/delegate)",
+        "price": 199,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "Virtual Particiption (oral/poster/delegate)",
+        "price": 299,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "Virtual Particiption (oral/poster/delegate)",
+        "price": 399,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      },
+      {
+        "name": "Exhibitor",
+        "price": 1999,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "Exhibitor",
+        "price": 2499,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "Exhibitor",
+        "price": 2999,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      },
+      {
+        "name": "2 nights Accommodation",
+        "price": 350,
+        "currency": "EUR",
+        "is_early_bird": true,
+        "early_bird_start": null,
+        "early_bird_end": "2026-02-28",
+        "deadline": "2026-02-28"
+      },
+      {
+        "name": "2 nights Accommodation",
+        "price": 350,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-08-31"
+      },
+      {
+        "name": "2 nights Accommodation",
+        "price": 350,
+        "currency": "EUR",
+        "is_early_bird": false,
+        "early_bird_start": null,
+        "early_bird_end": null,
+        "deadline": "2026-10-03"
+      }
+    ]
+  },
+  "markdown": "# Registration\n\n- [Home](https://artificialintelligence-forum.com/)\n- Registration\n\nSelect TitleDr.Mr.Mrs.Ms.\n\nSelect countryAfghanistanAland IslandsAlbaniaAlgeriaAmmanAndorraAngolaArgentinaArmeniaArubaAustraliaAustriaAzerbaijanBahamasBahrainBangladeshBarbadosBelarusBelgiumBelizeBeninBhutanBoliviaBosnia and HerzegovinaBotswanaBrazilBruneiBulgariaBurkina FasoBurundiCambodiaCameroonCanadaCangoCape VerdeCayman IslandsCentral African RepublicChileChinaColombiaCosta RicaCote dIvoireCroatiaCubaCyprusCzech RepublicDemocratic Republic of the CongoDenmarkDominican RepublicDublinEcuadorEgyptEl SalvadorEnglandEritreaEstoniaEthiopiaEuropeFaroe IslandsFijiFinlandFranceGabonGambiaGeorgiaGermanyGhanaGibraltarGreeceGrenadaGuamGuatemalaGuernseyGuineaGuinea-BissauGuyanaHaitiHondurasHong KongHungaryIcelandIndiaIndonesiaIranIraqIrelandIsle of ManIsraelItalyJamaicaJapanJerseyJohor BahruJordanKazakhstanKenyaKosovoKota KinabaluKuala LumpurKuantanKuchingKuwaitKyrgyzstanLaosLatviaLebanonLesothoLiberiaLibyaLiechtensteinLithuaniaLuxembourgMacau (China)MacedoniaMadagascarMalawiMalaysiaMaldivesMaliMaltaMarylandMauritaniaMauritiusMelakaMexicoMississippiMoldovaMonacomongoliaMontenegroMoroccoMozambiqueMyanmarNamibiaNepalNetherlandsNew GuineaNewzealandNicaraguaNigeriaNorth AmericaNorth KoreaNorwayOmanOregonPakistanPalestinePanamaParaguayPenangPeruPhilippinesPolandPortugalPuerto RicoQatarRepublic of IrelandRepublic of MacedoniaRepublic of YugoslaviaRomaniaRussiaRwandaSaint Kitts and NevisSan MarinoSaudi ArabiaScotlandSenegalSerbiaShah AlamSierra LeoneSingaporeSlovakiaSloveniaSolomon IslandsSomaliaSouth AfricaSouth KoreaSpainSri LankaSudanSvalbard and Jan MayenSwazilandSwedenSwitzerlandSyriaTaiwanTajikistanTanzaniaThailandTimor LesteTogoTrinidad and TobagoTunisiaTurkeyTurkmenistanUAEUgandaUKUkraineUnited Arab EmiratesUruguayUSAUzbekistanVaticanVenezuelaVictoriaVietnamWalesWest IndiesYemenZambiaZimbabwe\n\nPayment Gateway\n\n![](https://artificialintelligence-forum.com//assets/img/paypal.png)\n\n![](https://artificialintelligence-forum.com//assets/img/stripe.png)\n\nCurrency\nUSD\nGBP\nEUR\n\n\n##### Note: PayPal and Stripe accounts not mandatory to proceed for payment, which accepts all visa debit & credit cards\n\n|  | EARLYBIRD REGISTRATION <br>ON/BEFORE Feb 28, 2026 | SECOND TERM REGISTRATION <br>ON/BEFORE Aug 31, 2026 | FINAL REGISTRATION<br>ON/BEFORE Oct 03, 2026 |  |\n| --- | --- | --- | --- | --- |\n| Oral/Poster Presentation | €699 | €849 | €949 |  |\n| Student Participation (Oral/Poster) | €449 | €599 | €699 |  |\n| Bussiness - Delegate/Listener | €799 | €899 | €999 |  |\n| Academic - Delegate/Listener | €499 | €599 | €699 |  |\n| Virtual Particiption (oral/poster/delegate) | €199 | €299 | €399 |  |\n| Exhibitor | €1999 | €2499 | €2999 |  |\n| 2 nights Accommodation | €350 | €350 | €350 |  |\n\n|     |     |\n| --- | --- |\n|  |  |\n| **Total Amount** | **EUR** |\n|  |\n|  |\n|  |\n\n* * *\n\n## **Registration Includes**\n\n- Publish Conference Proceedings with ISBN & DOI Number\n- Encouraged to publish full length articles in Supporting Journals\n- Earn CPD Credit\n- Conference Kit (Conference Proceedings book, Bag, Badge, Notebook, Pen)\n- Admission to the Exhibition Halls\n- Admission to the Plenary Programme and Global Networking Forum\n- Access to all Scientific and Technical Sessions, Opening Ceremony and Closing Ceremony\n- Lunch, Coffee and Catering Breaks\n- Promotion in conference website and social media\n- Opportunity to participate in Educational Video & Quiz Competition\n- Conference photo coverage\n\n## **Benefits of Joining the Conference**\n\n- Opportunity to join as Session Chair, Member of Scientific and Organizing Committee\n- Best presentation awards\n- Get Opportunity Collaborate with United Research Forum\n- Avail discount on upcoming United Research Forum Events\n- 50% discount on United Research Forum Membership\n- Free Subscription to URF Publishers\n- Opportunity to participate United Research Forum Ambassador Program\n- Knock Down Geographical Barriers\n- Great resource for learning new career skills\n- Interact and network with your peers in an informal and friendly environment\n\n[![Watsapp](https://artificialintelligence-forum.com/images/whatsapp.png)](https://api.whatsapp.com/send?phone= \"watsapp\")\n\n![](https://fonts.gstatic.com/s/i/productlogos/translate/v14/24px.svg)\n\nOriginal text\n\nRate this translation\n\nYour feedback will be used to help improve Google Translate\n\n1\n\nOpens ChatThis icon Opens the chat window.\n\n![👋](https://cdn.jsdelivr.net/emojione/assets/png/1f44b.png?v=2.2.7) Hi! How can we help?\n\nI have a question\n\nTell me more\n\n![Chat attention grabber](https://embed.tawk.to/_s/v4/assets/images/attention-grabbers/168-r-br.svg)",
+  "capturedAt": "2026-08-26T15:54:27.186Z"
+}
