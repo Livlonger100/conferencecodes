@@ -13,11 +13,12 @@ import {
   EXTRACTION_JSON_PROMPT,
   EXTRACTION_JSON_SCHEMA,
   EXTRACTION_SYSTEM,
-  collapseTimeWindows,
+  collapsePricingTiers,
   normalizeExtraction,
   validateExtraction,
 } from "./extract-schema";
 import { groundPricingTiers, formatGroundingReport, type GroundingReport } from "./grounding";
+import { detectAcademicSignals, isAcademicLikely } from "./academic";
 import { assessCompleteness, detectPricingSignals } from "./completeness";
 import { makeSlug } from "@/lib/slug";
 import type { JobLogger } from "./log";
@@ -114,6 +115,7 @@ function rankPricingLinks(links: string[], baseUrl: string): string[] {
 interface PricingFind {
   pricingTiers: ExtractedTier[];
   report: GroundingReport | null;
+  pricingMarkdown: string;
   baseFromGiven: ExtractedConference | null;
   pricingUrl: string | null;
   tried: string[];
@@ -127,6 +129,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   const tried: string[] = [];
   let calls = 0;
   let lastReport: GroundingReport | null = null;
+  let lastMarkdown = "";
 
   // Every candidate page goes through the single shared grounding gate. Only
   // tiers whose name, price and their pairing are evidenced in the scraped text
@@ -134,6 +137,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   const ground = (json: any, markdown: string) => {
     const res = groundPricingTiers(normalizeExtraction(json)?.pricing_tiers ?? [], markdown);
     lastReport = res.report;
+    lastMarkdown = markdown;
     return res;
   };
 
@@ -145,7 +149,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
   const g1 = ground(first.json, first.markdown);
   if (g1.tiers.length > 0) {
     logger.info("pricing.found", { from: "given", url: givenUrl, tiers: g1.tiers.length, dropped: g1.report.dropped.length });
-    return { pricingTiers: g1.tiers, report: g1.report, baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
+    return { pricingTiers: g1.tiers, report: g1.report, pricingMarkdown: first.markdown, baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "basic", firecrawlCalls: calls };
   }
   const rawCount1 = (normalizeExtraction(first.json)?.pricing_tiers ?? []).filter((t) => t.price != null).length;
   logger.info("pricing.ungrounded", { url: givenUrl, rawPricedTiers: rawCount1, groundedTiers: 0, dropped: g1.report.dropped.length });
@@ -160,7 +164,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     const g = ground(c.json, c.markdown);
     if (g.tiers.length > 0) {
       logger.info("pricing.found", { from: "link_scan", url: cand, tiers: g.tiers.length, dropped: g.report.dropped.length });
-      return { pricingTiers: g.tiers, report: g.report, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+      return { pricingTiers: g.tiers, report: g.report, pricingMarkdown: c.markdown, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
     }
   }
 
@@ -177,7 +181,7 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     const g = ground(c.json, c.markdown);
     if (g.tiers.length > 0) {
       logger.info("pricing.found", { from: "map", url: cand, tiers: g.tiers.length, dropped: g.report.dropped.length });
-      return { pricingTiers: g.tiers, report: g.report, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
+      return { pricingTiers: g.tiers, report: g.report, pricingMarkdown: c.markdown, baseFromGiven, pricingUrl: cand, tried, proxyUsed: "basic", firecrawlCalls: calls };
     }
   }
 
@@ -190,14 +194,14 @@ async function findAndExtractPricing(givenUrl: string, logger: JobLogger): Promi
     const g = ground(s.json, s.markdown);
     if (g.tiers.length > 0) {
       logger.info("pricing.found", { from: "stealth", url: givenUrl, tiers: g.tiers.length, dropped: g.report.dropped.length });
-      return { pricingTiers: g.tiers, report: g.report, baseFromGiven: normalizeExtraction(s.json) ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+      return { pricingTiers: g.tiers, report: g.report, pricingMarkdown: s.markdown, baseFromGiven: normalizeExtraction(s.json) ?? baseFromGiven, pricingUrl: givenUrl, tried, proxyUsed: "stealth", firecrawlCalls: calls };
     }
     logger.warn("pricing.none_found", { url: givenUrl, tried });
-    return { pricingTiers: [], report: lastReport, baseFromGiven, pricingUrl: null, tried, proxyUsed: "stealth", firecrawlCalls: calls };
+    return { pricingTiers: [], report: lastReport, pricingMarkdown: lastMarkdown, baseFromGiven, pricingUrl: null, tried, proxyUsed: "stealth", firecrawlCalls: calls };
   }
 
   logger.warn("pricing.none_found", { url: givenUrl, tried });
-  return { pricingTiers: [], report: lastReport, baseFromGiven, pricingUrl: null, tried, proxyUsed: "basic", firecrawlCalls: calls };
+  return { pricingTiers: [], report: lastReport, pricingMarkdown: lastMarkdown, baseFromGiven, pricingUrl: null, tried, proxyUsed: "basic", firecrawlCalls: calls };
 }
 
 // ---- Tier 3: future browser-agent tier (STUB, not implemented) -------------
@@ -246,13 +250,27 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
     pricing = await findAndExtractPricing(url, logger);
   } catch (e: any) {
     logger.warn("pricing.finder_threw", { url, error: e?.message });
-    pricing = { pricingTiers: [], report: null, baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
+    pricing = { pricingTiers: [], report: null, pricingMarkdown: "", baseFromGiven: null, pricingUrl: null, tried: [url], proxyUsed: "none", firecrawlCalls: 0 };
   }
 
-  // Collapse multi-time-window pricing (one grid cell per window) into one tier
-  // per ticket type, mapped to the current-price / price-after-deadline model.
-  const pricingTiers: ExtractedTier[] = collapseTimeWindows(pricing.pricingTiers);
+  // Collapse pricing into one row per line item. A dated time-window grid (window
+  // labels with grounded dates on the page) collapses to current-window price +
+  // next-window after-price + current window end date; otherwise the same-name /
+  // per-cell collapse applies.
+  const pricingTiers: ExtractedTier[] = collapsePricingTiers(pricing.pricingTiers, pricing.pricingMarkdown);
   const base = mergeBase(cheap.base, pricing.baseFromGiven);
+
+  // Non-blocking academic-conference triage signal from the scraped text + items.
+  const academicText = `${cheap.pageText}\n${pricing.pricingMarkdown}`;
+  const academicSignals = detectAcademicSignals({
+    pageText: academicText,
+    tierNames: pricingTiers.map((t) => t.name),
+    excludedNames: (pricing.report?.excluded ?? []).map((e) => e.name),
+    conferenceName: base?.title || "",
+  });
+  const academicLine = isAcademicLikely(academicSignals)
+    ? `ACADEMIC LIKELY (${academicSignals.length} signals): ${academicSignals.join("; ")}\n`
+    : "";
 
   // Evidence-based signals: a mechanical grounding report and a grounded/proposed
   // ratio replace the model-reported confidence and prose summary.
@@ -260,7 +278,7 @@ export async function runExtraction(url: string, logger: JobLogger): Promise<Ext
   const droppedCount = pricing.report?.dropped.length ?? 0;
   const groundingConfidence =
     keptCount + droppedCount > 0 ? Math.round((keptCount / (keptCount + droppedCount)) * 100) / 100 : pricingTiers.length > 0 ? 0.7 : 0;
-  const groundingNote = pricing.report ? formatGroundingReport(pricing.report) : `${pricingTiers.length} grounded tier${pricingTiers.length === 1 ? "" : "s"}`;
+  const groundingNote = academicLine + (pricing.report ? formatGroundingReport(pricing.report) : `${pricingTiers.length} grounded tier${pricingTiers.length === 1 ? "" : "s"}`);
 
   const stealthUsed = pricing.proxyUsed === "stealth";
   const meta: ExtractionMeta = {

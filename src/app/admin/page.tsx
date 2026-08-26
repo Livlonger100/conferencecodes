@@ -285,6 +285,14 @@ const STATUS_COLORS = {
           </div>
         </div>
 
+        {/* 0. Academic-likely triage badge */}
+        {/ACADEMIC LIKELY/i.test(form.extraction_notes || "") && (
+          <div style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.4)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#9333ea", letterSpacing: 0.5 }}>ACADEMIC LIKELY</span>
+            <span style={{ fontSize: 12, color: "#6b21a8" }}>{((form.extraction_notes || "").match(/ACADEMIC LIKELY[^\n]*/i) || [""])[0].replace(/^ACADEMIC LIKELY[^:]*:\s*/i, "")}</span>
+          </div>
+        )}
+
         {/* 1. Grounding evidence + compare link (replaces self-reported confidence) */}
         {(form.extraction_notes || form.source_url) && (
           <div style={{ ...S.card, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", marginBottom: 12, padding: 14 }}>
@@ -624,7 +632,9 @@ function AdminTool() {
     }
     return true;
   }).sort((a, b) => {
-    // Most recently added first (by created_at timestamp)
+    // Group ACADEMIC LIKELY drafts together (first), then most recently added.
+    const aca = (x) => (/ACADEMIC LIKELY/i.test(x.extraction_notes || "") ? 0 : 1);
+    if (aca(a) !== aca(b)) return aca(a) - aca(b);
     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
   });
 
@@ -838,6 +848,7 @@ function AdminTool() {
               const duration = (conf.start && conf.end) ? Math.ceil((new Date(conf.end) - new Date(conf.start)) / (1000*60*60*24)) + 1 : null;
               const lowestPrice = conf.pricing?.length ? Math.min(...conf.pricing.map(p => p.price)) : null;
               const hasFree = conf.pricing?.some(p => p.price === 0);
+              const isAcademic = /ACADEMIC LIKELY/i.test(conf.extraction_notes || "");
               return (
                 <div key={conf.id} style={{ ...S.card, cursor: "pointer", transition: "all 0.2s" }}
                   onClick={() => { setEditingConf(conf); setView("edit"); }}>
@@ -851,6 +862,9 @@ function AdminTool() {
                         )}
                         {hasFree && (
                           <span style={{ ...S.tag, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e" }}>FREE TIER</span>
+                        )}
+                        {isAcademic && (
+                          <span style={{ ...S.tag, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", color: "#9333ea", fontWeight: 800 }}>ACADEMIC LIKELY</span>
                         )}
                       </div>
                       <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{conf.name || "Untitled"}</div>

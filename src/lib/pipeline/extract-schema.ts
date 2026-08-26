@@ -20,7 +20,7 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
       items: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Exact pass/ticket name from the page" },
+          name: { type: "string", description: "The pass/ticket name copied exactly from the page, character for character, including any spelling mistakes, typos, abbreviations, punctuation and casing. Never correct or normalise it." },
           price: { type: ["number", "null"], description: "Numeric amount that literally appears on the page, or null if no price is shown. Never estimate." },
           currency: { type: "string", description: "ISO 4217 code, e.g. USD, EUR, GBP" },
           is_early_bird: { type: "boolean" },
@@ -37,7 +37,7 @@ export const EXTRACTION_JSON_SCHEMA: Record<string, unknown> = {
 // Sent to Firecrawl's JSON extraction alongside the schema. The schema alone does
 // not carry a do-not-invent instruction, so this makes it explicit.
 export const EXTRACTION_JSON_PROMPT =
-  "Extract the actual purchasable passes/tickets a buyer would select, using their exact names as shown on the page. Only include names and prices that literally appear on the page text. Capture free passes as price 0 when the page says Free. Do NOT treat a price-increase timeline or rate-escalation schedule (rows like Early Rate, Standard Rate, Advance Rate, Late Rate, Final Rate under a Registration Timeline) as separate tickets; that describes how one pass's price rises over time, not distinct products. If no ticket prices are shown, return an empty pricing_tiers array. Never invent, estimate, or guess prices, tier names, or dates. If a single ticket type genuinely shows several prices across registration periods, return one entry per period using the exact same tier name for each, with that period's price and set deadline to the date that period ends. Do not average or merge them.";
+  "Extract the actual purchasable passes/tickets a buyer would select, using their exact names as shown on the page. Only include names and prices that literally appear on the page text. Capture free passes as price 0 when the page says Free. Do NOT treat a price-increase timeline or rate-escalation schedule (rows like Early Rate, Standard Rate, Advance Rate, Late Rate, Final Rate under a Registration Timeline) as separate tickets; that describes how one pass's price rises over time, not distinct products. If no ticket prices are shown, return an empty pricing_tiers array. Never invent, estimate, or guess prices, tier names, or dates. Copy each tier name exactly as written on the page, character for character, including any spelling mistakes, typos, abbreviations and punctuation; never correct or normalise a name. If a single ticket type genuinely shows several prices across registration periods, return one entry per period using the exact same tier name for each, with that period's price and set deadline to the date that period ends. Do not average or merge them.";
 
 export const EXTRACTION_SYSTEM = `You extract conference data for ConferenceCodes (AI conferences only).
 Return ONLY valid JSON matching the requested schema. No markdown, no prose.
@@ -256,4 +256,104 @@ export function collapseTimeWindows(tiers: ExtractedTier[], now: Date = new Date
     });
   }
   return out;
+}
+
+// ---- dated time-window grid detection + collapse ----------------------------
+
+const MONTHS_MAP: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5,
+  jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+  oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+// Parse window end-dates from explicit "on/before <date>" style grid headers,
+// read verbatim from the scraped text. Returns distinct ISO dates ascending.
+// Two or more mean a dated time-window grid is present on the page.
+export function parseGridWindowDates(rawText: string): string[] {
+  const low = (rawText || "").replace(/\s+/g, " ").toLowerCase();
+  const re = /(?:on\s*\/?\s*before|on or before|before|by|until|through|valid (?:till|until|through)|ends?)\s+([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})/g;
+  const set = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(low)) !== null) {
+    const mo = MONTHS_MAP[m[1]];
+    if (!mo) continue;
+    const day = parseInt(m[2], 10), year = parseInt(m[3], 10);
+    if (day < 1 || day > 31) continue;
+    set.add(`${year}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+  }
+  return [...set].sort();
+}
+
+// Collapse a recognised dated grid: one row per line item, current-window price,
+// next window's price as the after-price, current window end as the deadline,
+// past windows dropped, identical-in-every-window prices as a single price.
+function collapseGrid(tiers: ExtractedTier[], gridDates: string[], now: Date): ExtractedTier[] {
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const winMs = gridDates.map((d) => Date.parse(d));
+  let currentIdx = winMs.findIndex((ms) => ms >= today);
+  if (currentIdx === -1) currentIdx = gridDates.length - 1; // all windows past
+
+  const order: string[] = [];
+  const groups = new Map<string, ExtractedTier[]>();
+  for (const t of tiers) {
+    const key = baseKey(t.name) || (t.name || "").trim().toLowerCase() || "tier";
+    if (!groups.has(key)) { groups.set(key, []); order.push(key); }
+    groups.get(key)!.push(t);
+  }
+
+  const out: ExtractedTier[] = [];
+  for (const key of order) {
+    const group = groups.get(key)!;
+    const priced = group.filter((t) => t.price != null && !Number.isNaN(t.price as number));
+    if (priced.length === 0) { out.push(group[0]); continue; }
+    if (priced.length === 1) { out.push(priced[0]); continue; }
+
+    // Map each priced row to a window: by its grounded deadline when it matches a
+    // grid date, otherwise by extraction order (row i -> window i).
+    const byWindow = new Map<number, ExtractedTier>();
+    priced.forEach((t, i) => {
+      const dl = t.deadline || t.early_bird_end || null;
+      let idx = dl ? gridDates.indexOf(dl) : -1;
+      if (idx === -1) idx = i < gridDates.length ? i : gridDates.length - 1;
+      if (!byWindow.has(idx)) byWindow.set(idx, t);
+    });
+
+    const name = baseDisplayName(priced[0].name) || priced[0].name;
+    const currency = priced.find((t) => t.currency)?.currency ?? null;
+
+    // Identical price in every window: single price, no rise, no deadline.
+    if (new Set(priced.map((t) => t.price)).size === 1) {
+      out.push({ name, price: priced[0].price, price_after_deadline: null, currency, is_early_bird: false, early_bird_start: null, early_bird_end: null, deadline: null });
+      continue;
+    }
+
+    let current = byWindow.get(currentIdx) ?? null;
+    if (!current) {
+      const later = [...byWindow.entries()].sort((a, b) => a[0] - b[0]).find(([i]) => i >= currentIdx);
+      current = later ? later[1] : null;
+    }
+    let next: ExtractedTier | null = null;
+    for (let i = currentIdx + 1; i < gridDates.length; i++) { if (byWindow.has(i)) { next = byWindow.get(i)!; break; } }
+
+    if (!current) { for (const t of group) out.push(t); continue; }
+    out.push({
+      name,
+      price: current.price,
+      price_after_deadline: next ? next.price : null,
+      currency: current.currency ?? currency,
+      is_early_bird: !!current.is_early_bird,
+      early_bird_start: null,
+      early_bird_end: next ? gridDates[currentIdx] : null,
+      deadline: next ? gridDates[currentIdx] : null,
+    });
+  }
+  return out;
+}
+
+// Orchestrator: grid collapse when a dated grid is present, else the existing
+// same-name / per-cell collapse. Every value used is already grounded upstream.
+export function collapsePricingTiers(tiers: ExtractedTier[], rawText: string, now: Date = new Date()): ExtractedTier[] {
+  const gridDates = parseGridWindowDates(rawText);
+  if (gridDates.length >= 2) return collapseGrid(tiers, gridDates, now);
+  return collapseTimeWindows(tiers, now);
 }

@@ -19,9 +19,14 @@ export interface DroppedTier {
   name: string;
   reason: string;
 }
+export interface ExcludedTier {
+  name: string;
+  keyword: string;
+}
 export interface GroundingReport {
   kept: TierEvidence[];
   dropped: DroppedTier[];
+  excluded: ExcludedTier[];
   window: number;
 }
 export interface GroundingResult {
@@ -41,6 +46,19 @@ const DEFAULT_INVENTIONS = new Set([
   "early rate", "standard rate", "advance rate", "late rate", "final rate", "regular rate",
   "early bird", "super early bird", "tier 1", "tier 2", "general admission",
 ]);
+
+// Line items that are not conference admission and must never be written as
+// pricing tiers. Matched case-insensitively as a substring of the tier name.
+const NON_ADMISSION = [
+  "accommodation", "hotel", "nights", "night", "room", "gala dinner", "banquet",
+  "dinner ticket", "city tour", "excursion", "extra page", "additional page",
+  "publication fee", "page charge", "visa letter", "invitation letter", "shipping",
+];
+export function nonAdmissionKeyword(name: string): string | null {
+  const n = (name || "").toLowerCase();
+  for (const kw of NON_ADMISSION) if (n.includes(kw)) return kw;
+  return null;
+}
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -120,7 +138,8 @@ function dateAppearsInWindow(dateIso: string | null, windowLow: string): boolean
   const [y, m, d] = dateIso.split("-").map((x) => parseInt(x, 10));
   if (!y || !m || !d) return false;
   const hasMonth = windowLow.includes(MONTHS_FULL[m - 1]) || windowLow.includes(MONTHS_ABBR[m - 1]);
-  const hasDay = new RegExp(`\\b${d}(st|nd|rd|th)?\\b`).test(windowLow);
+  // Accept both "3" and zero-padded "03".
+  const hasDay = new RegExp(`\\b0?${d}(?:st|nd|rd|th)?\\b`).test(windowLow);
   if (hasMonth && hasDay) return true;
   const dd = String(d).padStart(2, "0"), mm = String(m).padStart(2, "0");
   return windowLow.includes(`${dd}/${mm}`) || windowLow.includes(`${dd}.${mm}`) || windowLow.includes(`${dd}-${mm}`);
@@ -148,10 +167,19 @@ export function groundPricingTiers(
   const kept: ExtractedTier[] = [];
   const keptEvidence: TierEvidence[] = [];
   const dropped: DroppedTier[] = [];
+  const excluded: ExcludedTier[] = [];
 
   for (const t of tiers) {
     const name = (t.name || "").trim();
     if (name.length < 2) { dropped.push({ name: name || "(unnamed)", reason: "empty tier name" }); continue; }
+
+    // Non-admission line items (accommodation, publication fees, etc.) are
+    // reported for the reviewer but never persisted as pricing tiers.
+    const exKw = nonAdmissionKeyword(name);
+    if (exKw) {
+      if (!excluded.some((e) => e.name.toLowerCase() === name.toLowerCase())) excluded.push({ name, keyword: exKw });
+      continue;
+    }
 
     // RULE 1: tier name must appear verbatim on the page.
     const nameIdxs = allIndexes(ctx.low, name.toLowerCase());
@@ -213,7 +241,7 @@ export function groundPricingTiers(
     });
   }
 
-  return { tiers: kept, report: { kept: keptEvidence, dropped, window } };
+  return { tiers: kept, report: { kept: keptEvidence, dropped, excluded, window } };
 }
 
 // At least one grounded tier survived.
@@ -231,6 +259,9 @@ export function formatGroundingReport(report: GroundingReport): string {
   }
   if (report.dropped.length) {
     lines.push(`Dropped ${report.dropped.length} ungrounded tier${report.dropped.length === 1 ? "" : "s"}: ${report.dropped.map((d) => `${d.name} [${d.reason}]`).join("; ")}`);
+  }
+  if (report.excluded.length) {
+    lines.push(`Excluded ${report.excluded.length} non-admission line item${report.excluded.length === 1 ? "" : "s"}: ${report.excluded.map((e) => `${e.name} [${e.keyword}]`).join("; ")}`);
   }
   return lines.join("\n");
 }
