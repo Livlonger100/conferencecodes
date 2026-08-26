@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 import { useState, useEffect } from "react";
+import { useAdminAuth, AuthBadge, SignInOverlay } from "../authUi";
 
 // Candidate pipeline UI: Discovered -> (select + Scrape selected) -> Drafted ->
 // review -> Published, plus a Failed bucket. "Scrape selected" queues and scrapes
@@ -31,7 +32,7 @@ const S = {
   input: { width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 13, fontFamily: "inherit", outline: "none" },
 };
 
-function CandidatesTool() {
+function CandidatesTool({ auth }) {
   const [candidates, setCandidates] = useState([]);
   const [counts, setCounts] = useState({});
   const [status, setStatus] = useState("discovered");
@@ -51,7 +52,9 @@ function CandidatesTool() {
   useEffect(() => { loadUsage(); /* eslint-disable-next-line */ }, []);
 
   const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast(null), 5000); };
-  const sessionExpired = () => { sessionStorage.removeItem("admin_authed"); showToast("Session expired, please sign in again", "error"); setTimeout(() => location.reload(), 1200); setRunning(null); };
+  // Session lost mid-use: show an error toast and open the sign-in overlay
+  // WITHOUT reloading, so anything in progress on the page is preserved.
+  const sessionExpired = () => { showToast("Session expired. Sign in to continue.", "error"); auth.sessionLost(); setRunning(null); };
 
   const load = async (st = status) => {
     setLoading(true);
@@ -112,7 +115,7 @@ function CandidatesTool() {
     setBulkResult(null);
     try {
       const q = await fetch("/api/candidates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, action }) });
-      if (q.status === 401) return sessionExpired();
+      if (q.status === 401) { setProgress(null); setBulkResult({ drafted: 0, failed: 0, aborted: true, remaining: ids.length }); sessionExpired(); return; }
       if (!q.ok) { const d = await q.json(); showToast(d.error || "Could not queue", "error"); setRunning(null); return; }
       let drafted = 0, failed = 0, remaining = null;
       // Re-scrape forces a fresh fetch (the page may have changed); first scrape reuses cache.
@@ -120,7 +123,8 @@ function CandidatesTool() {
       setProgress("Scraping...");
       for (let round = 0; round < 60; round++) {
         const res = await fetch(`/api/admin/run?job=ingest${force}`, { method: "POST" });
-        if (res.status === 401) return sessionExpired();
+        // Session lost mid-run: STOP and report what completed vs was not attempted.
+        if (res.status === 401) { setProgress(null); setBulkResult({ drafted, failed, aborted: true, remaining }); sessionExpired(); return; }
         const data = await res.json();
         if (!res.ok) { showToast(data.error || "Scrape failed", "error"); break; }
         const r = data.result || {};
@@ -192,6 +196,7 @@ function CandidatesTool() {
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/import" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Bulk Import</a>
           <a href="/admin/discovery" style={{ ...S.btnPrimary, textDecoration: "none", display: "inline-block" }}>Search discovery</a>
+          <AuthBadge status={auth.status} onSignIn={auth.openSignIn} onSignOut={auth.signOut} />
         </div>
       </div>
       {progress && (
@@ -224,9 +229,14 @@ function CandidatesTool() {
         </div>
 
         {bulkResult && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "#f0fdf4", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Scraping complete. {bulkResult.drafted} drafted, {bulkResult.failed} failed.</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: bulkResult.aborted ? "#fef2f2" : "#f0fdf4", border: `1px solid ${bulkResult.aborted ? "rgba(239,68,68,0.4)" : "rgba(34,197,94,0.35)"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: bulkResult.aborted ? "#b91c1c" : "#166534" }}>
+              {bulkResult.aborted
+                ? `Stopped: session expired. ${bulkResult.drafted} drafted, ${bulkResult.failed} failed; ${bulkResult.remaining ?? "some"} not attempted. Sign in and run again to finish.`
+                : `Scraping complete. ${bulkResult.drafted} drafted, ${bulkResult.failed} failed.`}
+            </span>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {bulkResult.aborted && <button style={S.btnPrimary} onClick={auth.openSignIn}>Sign in</button>}
               <button style={S.btnSecondary} onClick={() => goTo("ingested")}>View drafts</button>
               <button style={{ ...S.btnSecondary, background: "transparent", border: "none", color: "#6b7280" }} onClick={() => setBulkResult(null)}>Dismiss</button>
             </div>
@@ -320,35 +330,27 @@ function CandidatesTool() {
 }
 
 export default function CandidatesPage() {
-  const [authed, setAuthed] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [pwInput, setPwInput] = useState("");
-  const [pwError, setPwError] = useState("");
+  const auth = useAdminAuth();
+  const [everAuthed, setEverAuthed] = useState(false);
+  useEffect(() => { if (auth.status === "valid") setEverAuthed(true); }, [auth.status]);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_authed") === "1") setAuthed(true);
-    setAuthChecked(true);
-  }, []);
-
-  const submit = async () => {
-    const res = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pwInput }) });
-    if (res.ok) { sessionStorage.setItem("admin_authed", "1"); setAuthed(true); }
-    else setPwError("Incorrect password");
-  };
-
-  if (!authChecked) return null;
-  if (authed) return <CandidatesTool />;
-
-  return (
-    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
-      <div style={{ ...S.card, width: 320 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 12 }}>Admin access</div>
-        <input type="password" style={S.input} placeholder="Password" value={pwInput}
-          onChange={(e) => setPwInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-        {pwError && <div style={{ color: "#ef4444", fontSize: 12, marginTop: 8 }}>{pwError}</div>}
-        <button style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }} onClick={submit}>Enter</button>
+  if (auth.status === "checking") {
+    return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}>Checking session...</div>;
+  }
+  // First-load sign in (no session yet): full-screen gate.
+  if (auth.status === "invalid" && !everAuthed) {
+    return (
+      <div style={{ ...S.page }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+        <SignInOverlay open invalid={false} onSignedIn={auth.onSignedIn} onClose={null} />
       </div>
-    </div>
+    );
+  }
+  // Authed (or expired mid-use): keep the tool mounted, overlay sign-in when invalid.
+  return (
+    <>
+      <CandidatesTool auth={auth} />
+      <SignInOverlay open={auth.signInOpen || auth.status === "invalid"} invalid={auth.status === "invalid"} onSignedIn={auth.onSignedIn} onClose={() => auth.setSignInOpen(false)} />
+    </>
   );
 }

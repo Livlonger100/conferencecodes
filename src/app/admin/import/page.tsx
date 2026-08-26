@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 import { useState, useEffect } from "react";
+import { useAdminAuth, AuthBadge, SignInOverlay } from "../authUi";
 
 // Bulk URL import. Paste conference URLs, one click dedupes and queues the new
 // ones, then a Scrape button scrapes them into drafts with live progress and a
@@ -28,7 +29,7 @@ const TAG = {
 
 const MAX_ROUNDS = 30;
 
-function ImportTool({ onAuthError }) {
+function ImportTool({ auth }) {
   const [text, setText] = useState("");
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(null);
@@ -36,13 +37,14 @@ function ImportTool({ onAuthError }) {
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, error = false) => { setToast({ msg, error }); setTimeout(() => setToast(null), 6000); };
+  const onAuthError = () => { showToast("Session expired. Sign in to continue.", true); auth.sessionLost(); };
 
   // One action: dedupe + queue the new URLs (commit). Shows the tags as result.
   const queueUrls = async () => {
     setBusy("queue");
     try {
       const res = await fetch("/api/admin/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, mode: "commit" }) });
-      if (res.status === 401) { onAuthError(); return; }
+      if (res.status === 401) { onAuthError(); setBusy(null); return; }
       const data = await res.json();
       if (!res.ok) { showToast(data.error || "Import failed", true); return; }
       setResult(data);
@@ -60,7 +62,14 @@ function ImportTool({ onAuthError }) {
     try {
       for (let round = 0; round < MAX_ROUNDS; round++) {
         const res = await fetch("/api/admin/run?job=ingest", { method: "POST" });
-        if (res.status === 401) { onAuthError(); return; }
+        // Session lost mid-run: STOP and report completed vs not attempted; never
+        // leave the progress card looking like it is still running or finished.
+        if (res.status === 401) {
+          setIngest({ running: false, drafted, failed, remaining: remaining ?? 0, done: true, aborted: true });
+          onAuthError();
+          setBusy(null);
+          return;
+        }
         const data = await res.json();
         if (!res.ok) { showToast(data.error || "Scrape failed", true); break; }
         const r = data.result || {};
@@ -89,6 +98,7 @@ function ImportTool({ onAuthError }) {
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/admin" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Conferences</a>
           <a href="/admin/candidates" style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Candidates</a>
+          <AuthBadge status={auth.status} onSignIn={auth.openSignIn} onSignOut={auth.signOut} />
         </div>
       </div>
 
@@ -132,14 +142,18 @@ function ImportTool({ onAuthError }) {
           <button style={{ ...S.btnGreen, opacity: busy ? 0.6 : 1 }} disabled={!!busy} onClick={scrapeAll}>{busy === "scrape" ? "Scraping..." : "Scrape now"}</button>
 
           {ingest && (
-            <div style={{ marginTop: 14, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: ingest.done ? "#16a34a" : "#f97316", marginBottom: 6 }}>
-                {ingest.running ? "Scraping..." : "Scraping complete"}
+            <div style={{ marginTop: 14, background: ingest.aborted ? "#fef2f2" : "#f9fafb", border: `1px solid ${ingest.aborted ? "rgba(239,68,68,0.4)" : "#e5e7eb"}`, borderRadius: 10, padding: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: ingest.aborted ? "#b91c1c" : ingest.done ? "#16a34a" : "#f97316", marginBottom: 6 }}>
+                {ingest.aborted ? "Stopped: session expired" : ingest.running ? "Scraping..." : "Scraping complete"}
               </div>
               <div style={{ fontSize: 13, color: "#374151" }}>
-                {ingest.drafted} drafted, {ingest.failed} failed{ingest.remaining != null ? `, ${ingest.remaining} remaining` : ""}.
+                {ingest.drafted} drafted, {ingest.failed} failed{ingest.remaining != null ? `, ${ingest.remaining} ${ingest.aborted ? "not attempted" : "remaining"}` : ""}.
+                {ingest.aborted ? " Sign in and run Scrape now again to finish." : ""}
               </div>
-              {ingest.done && (
+              {ingest.aborted && (
+                <button onClick={auth.openSignIn} style={{ ...S.btnPrimary, display: "inline-block", marginTop: 12 }}>Sign in</button>
+              )}
+              {ingest.done && !ingest.aborted && (
                 <a href="/admin" style={{ ...S.btnSecondary, display: "inline-block", textDecoration: "none", marginTop: 12 }}>Review drafts in admin</a>
               )}
             </div>
@@ -155,37 +169,25 @@ function ImportTool({ onAuthError }) {
 }
 
 export default function ImportPage() {
-  const [authed, setAuthed] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [pwInput, setPwInput] = useState("");
-  const [pwError, setPwError] = useState("");
+  const auth = useAdminAuth();
+  const [everAuthed, setEverAuthed] = useState(false);
+  useEffect(() => { if (auth.status === "valid") setEverAuthed(true); }, [auth.status]);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_authed") === "1") setAuthed(true);
-    setAuthChecked(true);
-  }, []);
-
-  const submit = async () => {
-    const res = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pwInput }) });
-    if (res.ok) { sessionStorage.setItem("admin_authed", "1"); setAuthed(true); setPwError(""); }
-    else setPwError("Incorrect password");
-  };
-
-  const handleAuthError = () => { sessionStorage.removeItem("admin_authed"); setAuthed(false); setPwError("Please sign in again to continue."); };
-
-  if (!authChecked) return null;
-  if (authed) return <ImportTool onAuthError={handleAuthError} />;
-
-  return (
-    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
-      <div style={{ ...S.card, width: 320 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 12 }}>Admin access</div>
-        <input type="password" style={S.input} placeholder="Password" value={pwInput}
-          onChange={(e) => setPwInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-        {pwError && <div style={{ color: "#ef4444", fontSize: 12, marginTop: 8 }}>{pwError}</div>}
-        <button style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }} onClick={submit}>Enter</button>
+  if (auth.status === "checking") {
+    return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}>Checking session...</div>;
+  }
+  if (auth.status === "invalid" && !everAuthed) {
+    return (
+      <div style={{ ...S.page }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+        <SignInOverlay open invalid={false} onSignedIn={auth.onSignedIn} onClose={null} />
       </div>
-    </div>
+    );
+  }
+  return (
+    <>
+      <ImportTool auth={auth} />
+      <SignInOverlay open={auth.signInOpen || auth.status === "invalid"} invalid={auth.status === "invalid"} onSignedIn={auth.onSignedIn} onClose={() => auth.setSignInOpen(false)} />
+    </>
   );
 }
