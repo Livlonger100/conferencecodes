@@ -92,6 +92,7 @@ function formatDateRange(startStr, endStr) {
 }
 
 function formatPrice(p) {
+  if (p === 0) return "Free";
   return p != null ? "$" + p.toLocaleString() : "TBA";
 }
 

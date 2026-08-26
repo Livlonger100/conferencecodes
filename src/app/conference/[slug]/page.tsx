@@ -120,10 +120,13 @@ export default async function ConferencePage({
       "@type": "Organization",
       name: conf.organizer,
     },
-    ...(conf.price > 0 && {
+    // Structured data keeps the numeric price and currency (including a real 0
+    // for free tiers). A free tier is emitted as price 0, never the word "Free".
+    // An unknown/absent price (no 0 tier and no positive price) is omitted.
+    ...((conf.price > 0 || conf.pricingTiers?.some((t: any) => t.price === 0)) && {
       offers: {
         "@type": "Offer",
-        price: conf.earlyBird ?? conf.price,
+        price: conf.earlyBird ?? conf.price ?? 0,
         priceCurrency:
           conf.pricingTiers?.find((t: any) => t.price != null)?.currency ||
           conf.pricingTiers?.[0]?.currency ||
