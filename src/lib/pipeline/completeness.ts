@@ -52,18 +52,20 @@ export function assessCompleteness(opts: {
 }): Completeness {
   const priced = opts.tiers.filter((t) => t.price != null && !Number.isNaN(t.price as number));
   const hasDeadline = opts.tiers.some((t) => t.early_bird_start || t.early_bird_end || t.deadline);
-  const s = opts.signals;
 
   let score = 0.5;
   if (opts.pricingMethod === "tier2") score += 0.2; // pricing rendered via Firecrawl
   if (priced.length >= 2) score += 0.15;
   if (hasDeadline) score += 0.15;
 
+  // The old "page suggests about N tiers" heuristic (max of tier-ish words and
+  // landing-page currency amounts) over-counted so badly it flagged almost
+  // everything, so it is retired. The only kept incompleteness signal is the
+  // unambiguous one: no priced tier was captured at all. Confidence and the
+  // stored note now come from the mechanical grounding report, not this heuristic.
   const reasons: string[] = [];
   let likelyIncomplete = false;
   if (priced.length === 0) { likelyIncomplete = true; reasons.push("no priced tiers captured"); }
-  if (s.mentionsEarlyBird && !hasDeadline) { likelyIncomplete = true; reasons.push("page mentions early bird but no deadline captured"); }
-  if (s.impliedTierCount > priced.length) { likelyIncomplete = true; reasons.push(`page suggests about ${s.impliedTierCount} tiers, captured ${priced.length}`); }
 
   if (likelyIncomplete) score = Math.min(score, 0.4);
   score = Math.max(0, Math.min(1, Math.round(score * 100) / 100));
