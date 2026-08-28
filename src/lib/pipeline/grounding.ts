@@ -149,6 +149,20 @@ function windowLowAround(ctx: GroundingContext, idx: number, window: number): st
   return ctx.low.slice(Math.max(0, idx - window), Math.min(ctx.low.length, idx + window));
 }
 
+// Verbatim evidence that a tier is free, found in the tier's bounded window: the
+// words free / complimentary / no charge / no cost, OR a zero-price token next to
+// a currency ("$0", "eur 0", "0.00 gbp"). "included" is deliberately excluded: it
+// appears in feature lists ("lunch included") and would admit false free tiers.
+const FREE_CODES = CUR_CODES.join("|");
+const ZERO_NUM = "0(?:[.,]00?)?"; // 0, 0.0, 0.00
+function freeStatedNear(w: string): boolean {
+  if (/\bfree\b/.test(w) || /\bcomplimentary\b/.test(w) || /\bno charge\b/.test(w) || /\bno cost\b/.test(w)) return true;
+  if (new RegExp(`[$€£¥₹]\\s?${ZERO_NUM}(?![\\d.,])`).test(w)) return true; // "$0", "€0.00"
+  if (new RegExp(`\\b(?:${FREE_CODES})\\s?${ZERO_NUM}(?![\\d.,])`).test(w)) return true; // "usd 0"
+  if (new RegExp(`(?<![\\d.,])${ZERO_NUM}\\s?(?:${FREE_CODES})\\b`).test(w)) return true; // "0.00 gbp"
+  return false;
+}
+
 function snippetAround(ctx: GroundingContext, start: number, end: number): string {
   const pad = 30;
   const a = Math.max(0, Math.min(start, end) - pad);
@@ -188,9 +202,10 @@ export function groundPricingTiers(
       continue;
     }
 
-    // RULE 6: free tier. price 0 only if "free" sits near a grounded name.
+    // RULE 6: free tier. price 0 only if verbatim free evidence sits near a
+    // grounded name (free / complimentary / no charge / no cost / $0 style).
     if (t.price === 0) {
-      const ni = nameIdxs.find((i) => /\bfree\b/.test(windowLowAround(ctx, i, window)));
+      const ni = nameIdxs.find((i) => freeStatedNear(windowLowAround(ctx, i, window)));
       if (ni == null) { dropped.push({ name, reason: "free not stated near tier name" }); continue; }
       kept.push({ ...t, price: 0, price_after_deadline: null, deadline: null, early_bird_end: null });
       keptEvidence.push({ name, price: 0, currency: t.currency, snippet: snippetAround(ctx, ni, ni + name.length) });
