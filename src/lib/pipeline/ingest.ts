@@ -442,7 +442,7 @@ export async function writeConference(
   data: ExtractedConference,
   meta: { sourceCandidate: Candidate; completeness: Completeness; extraction: ExtractionMeta; autoReject?: boolean },
   logger: JobLogger
-): Promise<string> {
+): Promise<{ id: string; status: string }> {
   const nextRecrawl = computeNextRecrawl(data);
   // Scraped data is never trusted by default: in-window listings are saved as
   // DRAFT regardless of confidence and only go public when a human approves them.
@@ -450,9 +450,10 @@ export async function writeConference(
   // held as EXPIRED and a far-future one as ARCHIVED, so neither can be
   // accidentally published or appear in the normal draft review list.
   const window = dateWindowStatus(data.start_date, data.end_date);
-  // Academic/predatory auto-reject holds the conference as "rejected" (data kept,
-  // not a draft, not public) so it can be restored to draft in one click.
-  const status = meta.autoReject ? "rejected" : window === "past" ? "expired" : window === "out_of_window" ? "archived" : "draft";
+  // Academic/predatory auto-reject holds the conference as "archived" (a valid,
+  // non-public status; the DB status constraint does not allow "rejected"). Data
+  // is kept and the candidate is set to Rejected, restorable to draft in one click.
+  const status = meta.autoReject ? "archived" : window === "past" ? "expired" : window === "out_of_window" ? "archived" : "draft";
   const dateNote =
     window === "past"
       ? " | DATE: event date is in the past, held as expired (not publishable)"
@@ -487,16 +488,24 @@ export async function writeConference(
   // Dedupe against existing conferences by official/source URL.
   const { data: existing } = await supabaseAdmin
     .from("conferences")
-    .select("id")
+    .select("id, status")
     .eq("source_url", data.official_url)
     .maybeSingle();
+
+  // Never downgrade an already-published conference on a re-scrape (a human
+  // approved it): keep it live rather than resetting it to draft/archived.
+  let finalStatus = status;
+  if (existing && (existing.status === "active" || existing.status === "sold_out")) {
+    finalStatus = existing.status;
+    confRow.status = existing.status;
+  }
 
   let conferenceId: string;
   if (existing?.id) {
     const { error } = await supabaseAdmin.from("conferences").update(confRow).eq("id", existing.id);
     if (error) throw new Error(`conference update failed: ${error.message}`);
     conferenceId = existing.id;
-    logger.info("conference.updated", { id: conferenceId, name: data.title });
+    logger.info("conference.updated", { id: conferenceId, name: data.title, status: finalStatus });
   } else {
     // Generate a clean slug in the app (year not doubled, length capped) and
     // ensure it is unique. Only on insert; existing slugs are never rewritten.
@@ -532,7 +541,7 @@ export async function writeConference(
   }
   logger.info("pricing.written", { conferenceId, tiers: tierRows.length, nextRecrawl });
 
-  return conferenceId;
+  return { id: conferenceId, status: finalStatus };
 }
 
 // ---- batch runner ----------------------------------------------------------
@@ -588,29 +597,33 @@ export async function runIngestBatch(
         continue;
       }
 
-      const autoReject = !!extraction.academic?.autoReject;
-      const conferenceId = await writeConference(
+      const wantAutoReject = !!extraction.academic?.autoReject;
+      const conf = await writeConference(
         extraction.data,
-        { sourceCandidate: candidate, completeness: extraction.completeness!, extraction: extraction.meta, autoReject },
+        { sourceCandidate: candidate, completeness: extraction.completeness!, extraction: extraction.meta, autoReject: wantAutoReject },
         logger
       );
+      // The auto-reject only took effect if the conference was actually held
+      // non-public; an already-published conference is preserved, and its
+      // candidate stays Drafted/Published rather than being rejected.
+      const rejected = wantAutoReject && conf.status !== "active" && conf.status !== "sold_out";
 
-      const rejectNote = autoReject
+      const rejectNote = rejected
         ? `Auto-rejected: academic/predatory (${extraction.academic!.effectiveCount} effective signals): ${extraction.academic!.signals.join("; ")}`
         : null;
       await supabaseAdmin
         .from("discovery_queue")
         .update({
-          status: autoReject ? "rejected" : "ingested",
-          conference_id: conferenceId,
+          status: rejected ? "rejected" : "ingested",
+          conference_id: conf.id,
           tier_used: extraction.tier,
           notes: rejectNote ?? extraction.completeness?.note ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", candidate.id);
 
-      logger.info(autoReject ? "ingest.auto_rejected" : "ingest.success", { id: candidate.id, conferenceId, autoReject, signals: extraction.academic?.effectiveCount });
-      results.push({ id: candidate.id, name: candidate.name, status: autoReject ? "rejected" : "ingested", tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete, reason: rejectNote ?? undefined });
+      logger.info(rejected ? "ingest.auto_rejected" : "ingest.success", { id: candidate.id, conferenceId: conf.id, rejected, confStatus: conf.status });
+      results.push({ id: candidate.id, name: candidate.name, status: rejected ? "rejected" : "ingested", tier: extraction.tier, confidence: extraction.completeness?.score, likelyIncomplete: extraction.completeness?.likelyIncomplete, reason: rejectNote ?? undefined });
     } catch (e: any) {
       const reason = e?.message || "unexpected error";
       await supabaseAdmin

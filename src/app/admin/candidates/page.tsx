@@ -12,11 +12,12 @@ import { useAdminAuth, AuthBadge, SignInOverlay } from "../authUi";
 const TABS = [
   { key: "discovered", label: "Discovered" },
   { key: "ingested", label: "Drafted" },
+  { key: "published", label: "Published" },
   { key: "failed", label: "Failed" },
   { key: "rejected", label: "Rejected" },
   { key: "all", label: "All" },
 ];
-const STATUS_LABEL = { discovered: "Discovered", ingested: "Drafted", failed: "Failed", rejected: "Rejected", approved: "Queued" };
+const STATUS_LABEL = { discovered: "Discovered", ingested: "Drafted", published: "Published", failed: "Failed", rejected: "Rejected", approved: "Queued" };
 const statusLabel = (s) => STATUS_LABEL[s] || s;
 
 const S = {
@@ -297,6 +298,14 @@ function CandidatesTool({ auth }) {
                     </div>
                   )
                 )}
+                {status === "published" && (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#16a34a", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", padding: "4px 10px", borderRadius: 6 }}>PUBLISHED</span>
+                    {c.conference_id && (
+                      <a href={`/admin?edit=${c.conference_id}`} style={{ ...S.btnSecondary, textDecoration: "none", display: "inline-block" }}>Open in admin</a>
+                    )}
+                  </div>
+                )}
                 {(status === "ingested" || status === "failed") && (
                   rowResults[c.id] ? <RowResult id={c.id} /> : (
                     <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
@@ -308,7 +317,7 @@ function CandidatesTool({ auth }) {
                   )
                 )}
                 {status === "all" && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.status)}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{statusLabel(c.effective_status || c.status)}</span>
                 )}
                 {status === "rejected" && (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
