@@ -61,21 +61,54 @@ export function transformConference(c: any) {
   };
 }
 
-export function daysUntil(dateStr: string): number {
-  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+// A conference date is a CALENDAR date, never an instant. All parsing/formatting
+// below uses the y/m/d parts only, so it is immune to the viewer's timezone. Never
+// do `new Date("2026-10-07")` for a date-only value: that is midnight UTC and
+// renders as the previous day west of Greenwich.
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Parse the leading YYYY-MM-DD of a date (or date-time) string into parts.
+export function ymd(dateStr: string): { y: number; m: number; d: number } | null {
+  if (!dateStr) return null;
+  const mm = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!mm) return null;
+  return { y: +mm[1], m: +mm[2], d: +mm[3] };
+}
+
+// A stable timestamp for a calendar date: midnight UTC of that date. Only used
+// for day-count differences, never for display.
+function utcOf(dateStr: string): number | null {
+  const p = ymd(dateStr);
+  return p ? Date.UTC(p.y, p.m - 1, p.d) : null;
+}
+
+// Today as a calendar date in the viewer's local zone, expressed as midnight UTC
+// so it can be diffed against event dates on the same (UTC-midnight) footing.
+function todayUtc(now: Date = new Date()): number {
+  return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+export function daysUntil(dateStr: string, now: Date = new Date()): number {
+  const t = utcOf(dateStr);
+  if (t == null) return 0;
+  return Math.round((t - todayUtc(now)) / DAY_MS);
 }
 
 export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const p = ymd(dateStr);
+  if (!p) return "";
+  return `${MONTHS_SHORT[p.m - 1]} ${p.d}, ${p.y}`;
 }
 
 export function formatDateRange(startStr: string, endStr: string): string {
-  const s = new Date(startStr), e = new Date(endStr);
-  const mo = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
-  const yr = (d: Date) => d.getFullYear();
-  const day = (d: Date) => d.getDate();
-  if (mo(s) === mo(e) && yr(s) === yr(e)) return `${mo(s)} ${day(s)}-${day(e)}, ${yr(s)}`;
-  return `${mo(s)} ${day(s)} - ${mo(e)} ${day(e)}, ${yr(e)}`;
+  const s = ymd(startStr);
+  if (!s) return "";
+  const e = ymd(endStr) || s;
+  // Single-day event: one date, no range.
+  if (s.y === e.y && s.m === e.m && s.d === e.d) return `${MONTHS_SHORT[s.m - 1]} ${s.d}, ${s.y}`;
+  if (s.m === e.m && s.y === e.y) return `${MONTHS_SHORT[s.m - 1]} ${s.d}-${e.d}, ${s.y}`;
+  return `${MONTHS_SHORT[s.m - 1]} ${s.d} - ${MONTHS_SHORT[e.m - 1]} ${e.d}, ${e.y}`;
 }
 
 export function formatPrice(p: number | null): string {
@@ -90,26 +123,22 @@ export type ConferenceStatus = {
   pulse: boolean;
 };
 
-export function getConferenceStatus(start: string, end: string | null): ConferenceStatus {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = new Date(start);
-  startDate.setHours(0, 0, 0, 0);
-  // treat null end as same-day event
-  const endDate = end ? new Date(end) : new Date(start);
-  endDate.setHours(0, 0, 0, 0);
+export function getConferenceStatus(start: string, end: string | null, now: Date = new Date()): ConferenceStatus {
+  const today = todayUtc(now);
+  const startT = utcOf(start);
+  if (startT == null) return { status: "upcoming", label: "", color: "#f97316", pulse: false };
+  const endT = utcOf(end || start) ?? startT; // null end -> same-day event
 
-  if (today > endDate) {
+  if (today > endT) {
     return { status: "ended", label: "Ended", color: "#9ca3af", pulse: false };
   }
-  if (today.getTime() === startDate.getTime()) {
+  if (today === startT) {
     return { status: "today", label: "Starts today", color: "#22c55e", pulse: false };
   }
-  if (today > startDate && today <= endDate) {
+  if (today > startT && today <= endT) {
     return { status: "live", label: "Happening now", color: "#22c55e", pulse: true };
   }
-  // upcoming
-  const days = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const days = Math.round((startT - today) / DAY_MS);
   const label = days === 1 ? "Tomorrow" : `${days} days away`;
   return { status: "upcoming", label, color: "#f97316", pulse: false };
 }
@@ -124,7 +153,7 @@ export function sortConferences(conferences: any[]): any[] {
   return [...conferences].sort((a, b) => {
     const pa = priority(a), pb = priority(b);
     if (pa !== pb) return pa - pb;
-    return new Date(a.start).getTime() - new Date(b.start).getTime();
+    return (utcOf(a.start) ?? 0) - (utcOf(b.start) ?? 0);
   });
 }
 

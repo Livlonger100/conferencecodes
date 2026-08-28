@@ -2,7 +2,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase";
-import { transformConference, formatDateRange } from "@/lib/conference-utils";
+import { transformConference, formatDateRange, ymd } from "@/lib/conference-utils";
 import ConferenceDetailClient from "./ConferenceDetailClient";
 
 const BASE_URL = "https://conferencecodes.com";
@@ -42,8 +42,8 @@ export async function generateMetadata({
   const conf = transformConference(data);
 
   // Only append the year when the name does not already contain it.
-  const year = new Date(conf.start).getFullYear();
-  const titleName = Number.isFinite(year) && !conf.name.includes(String(year)) ? `${conf.name} ${year}` : conf.name;
+  const year = ymd(conf.start)?.y;
+  const titleName = year && !conf.name.includes(String(year)) ? `${conf.name} ${year}` : conf.name;
   const title = `${titleName}: Tickets, Pricing & Discount Codes | ConferenceCodes`;
 
   // Fallback description so no detail page is left with an empty meta description.

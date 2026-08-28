@@ -14,6 +14,7 @@
 import { EXTRACTION_JSON_SCHEMA, EXTRACTION_JSON_PROMPT, normalizeExtraction, collapsePricingTiers } from "../src/lib/pipeline/extract-schema.ts";
 import { groundPricingTiers, applyDiscountDeadlines } from "../src/lib/pipeline/grounding.ts";
 import { assessAcademic } from "../src/lib/pipeline/academic.ts";
+import { formatDateRange, daysUntil } from "../src/lib/conference-utils.ts";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -117,6 +118,34 @@ async function refresh() {
 
 // ---- entrypoint -------------------------------------------------------------
 const arg = process.argv[2];
+// Calendar-date guard. A conference date must render as the exact source date in
+// any timezone; a one-day event renders as a single date, not a range. This class
+// of bug (date-only string parsed as midnight UTC, then formatted in local time)
+// is invisible to the grounding gate. Run under a west-of-UTC zone to also catch a
+// regression to `new Date(str)`: TZ=America/Los_Angeles node scripts/pricing-regression.ts
+function checkDates() {
+  const cases = [
+    { label: "World Summit AI (Oct 7-8 2026)", start: "2026-10-07", end: "2026-10-08", expect: "Oct 7-8, 2026" },
+    { label: "Physical AI single day (Oct 13 2026)", start: "2026-10-13", end: "2026-10-13", expect: "Oct 13, 2026" },
+    { label: "HumanX (Sep 22-24 2026)", start: "2026-09-22", end: "2026-09-24", expect: "Sep 22-24, 2026" },
+    { label: "cross-month", start: "2026-01-31", end: "2026-02-02", expect: "Jan 31 - Feb 2, 2026" },
+    { label: "null end -> single date", start: "2026-03-05", end: null, expect: "Mar 5, 2026" },
+  ];
+  const fails = [];
+  for (const c of cases) {
+    const got = formatDateRange(c.start, c.end);
+    if (got !== c.expect) fails.push(`${c.label}: expected "${c.expect}", got "${got}"`);
+  }
+  const noon = new Date("2026-08-28T12:00:00Z");
+  if (daysUntil("2026-08-30", noon) !== 2) fails.push(`daysUntil off by shift: expected 2, got ${daysUntil("2026-08-30", noon)}`);
+  if (daysUntil("2026-08-28", noon) !== 0) fails.push(`daysUntil today: expected 0, got ${daysUntil("2026-08-28", noon)}`);
+  console.log(`\n########## DATE GUARD (TZ=${process.env.TZ || "system"}) ##########`);
+  if (fails.length) { console.error("DATE GUARD FAILED:\n  " + fails.join("\n  ")); process.exit(1); }
+  console.log("DATE GUARD PASSED: " + cases.map((c) => `${c.expect}`).join(" | "));
+}
+
+checkDates();
+
 if (arg === "--refresh") {
   await refresh();
 } else {
