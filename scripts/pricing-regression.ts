@@ -128,6 +128,9 @@ function checkDates() {
     { label: "World Summit AI (Oct 7-8 2026)", start: "2026-10-07", end: "2026-10-08", expect: "Oct 7-8, 2026" },
     { label: "Physical AI single day (Oct 13 2026)", start: "2026-10-13", end: "2026-10-13", expect: "Oct 13, 2026" },
     { label: "HumanX (Sep 22-24 2026)", start: "2026-09-22", end: "2026-09-24", expect: "Sep 22-24, 2026" },
+    { label: "Big Data London (Sep 23-24 2026)", start: "2026-09-23", end: "2026-09-24", expect: "Sep 23-24, 2026" },
+    { label: "AI Expo Africa (Oct 28-29 2026)", start: "2026-10-28", end: "2026-10-29", expect: "Oct 28-29, 2026" },
+    { label: "All-In Summit (Sep 13-16 2026, four days)", start: "2026-09-13", end: "2026-09-16", expect: "Sep 13-16, 2026" },
     { label: "cross-month", start: "2026-01-31", end: "2026-02-02", expect: "Jan 31 - Feb 2, 2026" },
     { label: "null end -> single date", start: "2026-03-05", end: null, expect: "Mar 5, 2026" },
   ];
