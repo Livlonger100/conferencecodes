@@ -8,22 +8,27 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const status = new URL(req.url).searchParams.get("status") || "discovered";
 
-  const query = supabaseAdmin
+  const { data: rows, error } = await supabaseAdmin
     .from("discovery_queue")
     .select("*")
     .order("created_at", { ascending: false });
-
-  const { data, error } =
-    status === "all" ? await query : await query.eq("status", status);
-
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Status counts for the admin header.
-  const { data: allRows } = await supabaseAdmin.from("discovery_queue").select("status");
-  const counts: Record<string, number> = {};
-  for (const r of allRows ?? []) counts[r.status] = (counts[r.status] || 0) + 1;
+  // "Published" is derived from the linked conference's live status, so a
+  // drafted candidate moves out of the Drafted tab the moment its conference is
+  // published (active/sold_out) and back if it is unpublished. No stored state
+  // to keep in sync; the candidate row and its notes are never modified.
+  const { data: confs } = await supabaseAdmin.from("conferences").select("id, status");
+  const publishedIds = new Set((confs ?? []).filter((c) => c.status === "active" || c.status === "sold_out").map((c) => c.id));
+  const effective = (c: any) =>
+    c.status === "ingested" && c.conference_id && publishedIds.has(c.conference_id) ? "published" : c.status;
 
-  return NextResponse.json({ candidates: data, counts });
+  const counts: Record<string, number> = {};
+  const annotated = (rows ?? []).map((r) => ({ ...r, effective_status: effective(r) }));
+  for (const r of annotated) counts[r.effective_status] = (counts[r.effective_status] || 0) + 1;
+
+  const candidates = status === "all" ? annotated : annotated.filter((r) => r.effective_status === status);
+  return NextResponse.json({ candidates, counts });
 }
 
 export async function PATCH(req: NextRequest) {
