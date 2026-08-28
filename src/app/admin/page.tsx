@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect, Fragment } from "react";
 import { useAdminAuth, AuthBadge, SignInOverlay } from "./authUi";
+import { daysUntil, formatDateRange, ymd } from "@/lib/conference-utils";
 
 // ============================================================
 // ConferenceCodes Admin Tool — Next.js + Supabase
@@ -845,9 +846,10 @@ function AdminTool({ auth }) {
               </div>
             ) : filtered.map(conf => {
               const sc = STATUS_COLORS[conf.status] || STATUS_COLORS.draft;
-              const daysAway = conf.start ? Math.ceil((new Date(conf.start) - new Date()) / (1000*60*60*24)) : null;
+              const daysAway = conf.start ? daysUntil(conf.start) : null;
               const mainPrice = conf.pricing?.find(p => p.tier === "Early Bird") || conf.pricing?.[0];
-              const duration = (conf.start && conf.end) ? Math.ceil((new Date(conf.end) - new Date(conf.start)) / (1000*60*60*24)) + 1 : null;
+              const _ds = ymd(conf.start), _de = ymd(conf.end || conf.start);
+              const duration = (_ds && _de) ? Math.round((Date.UTC(_de.y, _de.m - 1, _de.d) - Date.UTC(_ds.y, _ds.m - 1, _ds.d)) / (1000*60*60*24)) + 1 : null;
               const lowestPrice = conf.pricing?.length ? Math.min(...conf.pricing.map(p => p.price)) : null;
               const hasFree = conf.pricing?.some(p => p.price === 0);
               const isAcademic = /ACADEMIC LIKELY/i.test(conf.extraction_notes || "");
@@ -872,8 +874,7 @@ function AdminTool({ auth }) {
                       <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{conf.name || "Untitled"}</div>
                       <div style={{ fontSize: 12, color: "#6b7280" }}>
                         {conf.city && conf.country ? `${conf.city}, ${conf.country}` : "Location TBD"}
-                        {conf.start && ` · ${new Date(conf.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
-                        {conf.end && conf.end !== conf.start && ` – ${new Date(conf.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                        {conf.start && ` · ${formatDateRange(conf.start, conf.end)}`}
                         {duration && <span style={{ color: "#6b7280" }}> · {duration} day{duration !== 1 ? "s" : ""}</span>}
                         {daysAway !== null && daysAway > 0 && <span style={{ color: daysAway < 30 ? "#f97316" : "#64748b" }}> · {daysAway}d away</span>}
                       </div>

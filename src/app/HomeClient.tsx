@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { daysUntil, formatDate, formatDateRange, getConferenceStatus, ymd } from "@/lib/conference-utils";
 
 const FORMATS = ["All Formats", "In-person", "Virtual", "Hybrid"];
 
@@ -69,46 +70,12 @@ function transformConference(c: any) {
 }
 
 
-function daysUntil(dateStr) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-}
-
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function formatDateRange(startStr, endStr) {
-  const s = new Date(startStr);
-  const e = new Date(endStr);
-  const mo = (d) => d.toLocaleDateString("en-US", { month: "short" });
-  const yr = (d) => d.getFullYear();
-  const day = (d) => d.getDate();
-  if (mo(s) === mo(e) && yr(s) === yr(e)) {
-    return `${mo(s)} ${day(s)}-${day(e)}, ${yr(s)}`;
-  }
-  return `${mo(s)} ${day(s)} - ${mo(e)} ${day(e)}, ${yr(e)}`;
-}
+// daysUntil, formatDate, formatDateRange, getConferenceStatus are the shared
+// timezone-safe helpers imported from conference-utils (calendar-date only).
 
 function formatPrice(p) {
   if (p === 0) return "Free";
   return p != null ? "$" + p.toLocaleString() : "TBA";
-}
-
-function getConferenceStatus(start, end) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = new Date(start);
-  startDate.setHours(0, 0, 0, 0);
-  const endDate = end ? new Date(end) : new Date(start);
-  endDate.setHours(0, 0, 0, 0);
-
-  if (today > endDate) return { status: "ended", label: "Ended", color: "#9ca3af", pulse: false };
-  if (today.getTime() === startDate.getTime()) return { status: "today", label: "Starts today", color: "#22c55e", pulse: false };
-  if (today > startDate && today <= endDate) return { status: "live", label: "Happening now", color: "#22c55e", pulse: true };
-  const days = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  return { status: "upcoming", label: days === 1 ? "Tomorrow" : `${days} days away`, color: "#f97316", pulse: false };
 }
 
 // Determine current and next price from a conference's pricing tiers
@@ -236,9 +203,9 @@ function ConferenceCard({ conf }) {
   const catStyle = getCategoryStyle(conf.category);
   const p = getCurrentPricing(conf);
 
-  const startDate = new Date(conf.start);
-  const monthAbbr = startDate.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
-  const dayNum = startDate.getDate();
+  const _sp = ymd(conf.start);
+  const monthAbbr = _sp ? ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][_sp.m - 1] : "";
+  const dayNum = _sp ? _sp.d : "";
 
   return (
     <div
